@@ -77,7 +77,9 @@ function buildPosts(rows) {
     reactions: h.incl('Reactions'), impressions: h.exact('Impressions/views of posts'),
     link: h.exact('Link') };
   return h.body.map(r => {
-    let msg = clean(r[c.message]); if (msg.length > 90) msg = msg.slice(0, 90) + '...';
+    let msg = clean(r[c.message])
+      .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
+    if (msg.length > 90) msg = msg.slice(0, 90) + '...';
     return {
       date: toISO(r[c.date]), network: normNet(r[c.network]), pillar: clean(r[c.pillar]),
       profile: clean(r[c.profile]), engagement: Math.round(num(r[c.reactions])),

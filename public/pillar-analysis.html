@@ -15,7 +15,7 @@
   h1{font-size:24px;margin:0}
   .sub{color:var(--muted);font-size:13px;margin-top:4px}
   .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-  select{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit}
+  select,input[type=date]{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit}
   label.fl{color:var(--muted);font-size:12px;margin-right:4px}
   .nav{display:flex;gap:8px;margin-bottom:18px}
   .nav a{padding:8px 16px;border-radius:10px;border:1px solid var(--line);color:var(--muted);background:var(--card);font-weight:600;font-size:13px;text-decoration:none}
@@ -26,16 +26,24 @@
   .kpi .val{font-size:22px;font-weight:700;margin-top:6px}
   .kpi .vsub{color:var(--muted);font-size:12px;margin-top:2px}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:18px}
   .card h3{margin:0 0 12px;font-size:15px;font-weight:600}
   .full{grid-column:1 / -1}
   canvas{max-height:320px}
+  .tbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .tbar .left{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
   th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
   th.sortable{cursor:pointer;user-select:none}
   th.sortable:hover{color:var(--txt)}
   td.num,th.num{text-align:right;white-space:nowrap}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+  .msg{color:var(--muted);max-width:360px}
+  a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+  .pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:14px;color:var(--muted)}
+  .pager button{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px}
+  .pager button:disabled{opacity:.4;cursor:default}
   .foot{color:var(--muted);font-size:12px;margin-top:18px;text-align:center}
   @media(max-width:880px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
 </style>
@@ -65,14 +73,14 @@
   </div>
 
   <div class="grid">
-    <div class="card"><h3>Engagement ตาม Pillar</h3><canvas id="cEng"></canvas></div>
-    <div class="card"><h3>Impressions ตาม Pillar</h3><canvas id="cImp"></canvas></div>
-    <div class="card"><h3>Engagement Rate ตาม Pillar</h3><canvas id="cRate"></canvas></div>
-    <div class="card"><h3>Engagement ต่อโพสต์ (ประสิทธิภาพ)</h3><canvas id="cEpp"></canvas></div>
-    <div class="card full"><h3>Engagement ตาม Pillar × แพลตฟอร์ม (stacked)</h3><canvas id="cStack" style="max-height:380px"></canvas></div>
+    <div class="card" style="margin:0"><h3>Engagement ตาม Pillar</h3><canvas id="cEng"></canvas></div>
+    <div class="card" style="margin:0"><h3>Impressions ตาม Pillar</h3><canvas id="cImp"></canvas></div>
+    <div class="card" style="margin:0"><h3>Engagement Rate ตาม Pillar</h3><canvas id="cRate"></canvas></div>
+    <div class="card" style="margin:0"><h3>Engagement ต่อโพสต์ (ประสิทธิภาพ)</h3><canvas id="cEpp"></canvas></div>
+    <div class="card full" style="margin:0"><h3>Engagement ตาม Pillar × แพลตฟอร์ม (stacked)</h3><canvas id="cStack" style="max-height:380px"></canvas></div>
   </div>
 
-  <div class="card full">
+  <div class="card">
     <h3>ตารางสรุปตาม Pillar</h3>
     <div style="overflow-x:auto">
     <table id="tbl">
@@ -89,33 +97,63 @@
     </div>
   </div>
 
+  <div class="card">
+    <div class="tbar">
+      <h3 style="margin:0">🏆 Top Posts (รายโพสต์ทั้งหมด)</h3>
+      <div class="left">
+        <label class="fl">Pillar</label><select id="pPillar"><option value="">ทั้งหมด</option></select>
+        <label class="fl" style="margin-left:6px">วันที่</label>
+        <input type="date" id="dFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="dTo">
+        <label class="fl" style="margin-left:6px">เรียงตาม</label>
+        <select id="sortField">
+          <option value="engagement">Engagement</option>
+          <option value="impressions">Impressions</option>
+          <option value="date">วันที่</option>
+        </select>
+        <select id="sortDir"><option value="desc">มาก → น้อย</option><option value="asc">น้อย → มาก</option></select>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+    <table id="tPosts">
+      <thead><tr>
+        <th>#</th><th>วันที่</th><th>Network</th><th>Pillar</th><th>Profile</th>
+        <th class="num sortable" data-s="engagement">Engagement ⇅</th>
+        <th class="num sortable" data-s="impressions">Impressions ⇅</th>
+        <th>Message</th><th>Link</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+    <div class="pager">
+      <span id="pageInfo"></span>
+      <button id="prev">‹ ก่อนหน้า</button>
+      <button id="next">ถัดไป ›</button>
+    </div>
+  </div>
+
   <div class="foot" id="foot"></div>
 </div>
 
 <script>
 const PLAT_COLORS={Facebook:'#1877f2',Instagram:'#e1306c',TikTok:'#00d3c7',X:'#9aa3b2',YouTube:'#ff0000'};
-const PALETTE=['#5b8cff','#27c4a6','#e1306c','#f5a524','#9b8cff','#00d3c7','#ff7a59','#7ee787','#f78fb3','#54a0ff','#c9cdd6'];
 const fmt=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':Math.round(n).toLocaleString();
 const pct=n=>(n*100).toFixed(2)+'%';
-let DATA, charts={}, sortKey='engagement', sortDir=-1;
+const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+let DATA, charts={}, sortKey='engagement', sortDir=-1, PAGE=1, PER=20;
 
 Chart.register(ChartDataLabels);
 Chart.defaults.color='#9aa3b2'; Chart.defaults.borderColor='#2b303c';
 Chart.defaults.font.family="'Segoe UI',Tahoma,'Sarabun',sans-serif";
 
-function scopedRows(){
-  const fp=document.getElementById('fPlatform').value;
-  return DATA.summary.filter(r=>!fp||r.platform===fp);
-}
+const platVal=()=>document.getElementById('fPlatform').value;
+function scopedRows(){const fp=platVal();return DATA.summary.filter(r=>!fp||r.platform===fp);}
 function byPillar(rows){
   const m={};
-  for(const r of rows){
-    if(!m[r.pillar]) m[r.pillar]={pillar:r.pillar,impressions:0,engagement:0,posts:0};
-    m[r.pillar].impressions+=r.impressions; m[r.pillar].engagement+=r.reactions; m[r.pillar].posts+=r.posts;
-  }
-  return Object.values(m).map(x=>({...x, rate:x.impressions?x.engagement/x.impressions:0, epp:x.posts?x.engagement/x.posts:0}));
+  for(const r of rows){if(!m[r.pillar])m[r.pillar]={pillar:r.pillar,impressions:0,engagement:0,posts:0};
+    m[r.pillar].impressions+=r.impressions;m[r.pillar].engagement+=r.reactions;m[r.pillar].posts+=r.posts;}
+  return Object.values(m).map(x=>({...x,rate:x.impressions?x.engagement/x.impressions:0,epp:x.posts?x.engagement/x.posts:0}));
 }
-function bar(id,labels,data,color,labelColor,fmtFn,horizontal){
+function bar(id,labels,data,color,fmtFn,horizontal){
   if(charts[id])charts[id].destroy();
   charts[id]=new Chart(document.getElementById(id),{type:'bar',
     data:{labels,datasets:[{data,backgroundColor:color,borderRadius:6}]},
@@ -123,15 +161,12 @@ function bar(id,labels,data,color,labelColor,fmtFn,horizontal){
       layout:{padding:horizontal?{right:54}:{top:24}},
       scales:horizontal?{x:{ticks:{callback:fmtFn}}}:{y:{ticks:{callback:fmtFn}}},
       plugins:{legend:{display:false},
-        datalabels:{color:labelColor||'#cdd6e6',anchor:'end',align:horizontal?'right':'top',
-          font:{weight:'600',size:11},formatter:v=>v>0?fmtFn(v):''}}}});
+        datalabels:{color:'#cdd6e6',anchor:'end',align:horizontal?'right':'top',font:{weight:'600',size:11},formatter:v=>v>0?fmtFn(v):''}}}});
 }
-
-function render(){
+function renderCharts(){
   const rows=scopedRows();
   const pil=byPillar(rows).filter(p=>p.posts>0||p.engagement>0);
-
-  const top=(key)=>pil.slice().sort((a,b)=>b[key]-a[key])[0];
+  const top=(k)=>pil.slice().sort((a,b)=>b[k]-a[k])[0];
   const tE=top('engagement'),tR=top('rate'),tI=top('impressions'),tP=top('epp');
   const set=(id,v)=>document.getElementById(id).textContent=v;
   if(tE){set('kTopEng',tE.pillar);set('kTopEngV',fmt(tE.engagement)+' engagement');}
@@ -140,16 +175,15 @@ function render(){
   if(tP){set('kTopEpp',tP.pillar);set('kTopEppV',Math.round(tP.epp).toLocaleString()+' /โพสต์');}
 
   const byEng=pil.slice().sort((a,b)=>b.engagement-a.engagement);
-  bar('cEng',byEng.map(p=>p.pillar),byEng.map(p=>p.engagement),'#27c4a6','#cdd6e6',fmt,false);
+  bar('cEng',byEng.map(p=>p.pillar),byEng.map(p=>p.engagement),'#27c4a6',fmt,false);
   const byImp=pil.slice().sort((a,b)=>b.impressions-a.impressions);
-  bar('cImp',byImp.map(p=>p.pillar),byImp.map(p=>p.impressions),'#5b8cff','#cdd6e6',fmt,true);
+  bar('cImp',byImp.map(p=>p.pillar),byImp.map(p=>p.impressions),'#5b8cff',fmt,true);
   const byRate=pil.slice().sort((a,b)=>b.rate-a.rate);
-  bar('cRate',byRate.map(p=>p.pillar),byRate.map(p=>+(p.rate*100).toFixed(2)),'#f5a524','#cdd6e6',v=>v+'%',false);
+  bar('cRate',byRate.map(p=>p.pillar),byRate.map(p=>+(p.rate*100).toFixed(2)),'#f5a524',v=>v+'%',false);
   const byEpp=pil.slice().sort((a,b)=>b.epp-a.epp);
-  bar('cEpp',byEpp.map(p=>p.pillar),byEpp.map(p=>Math.round(p.epp)),'#9b8cff','#cdd6e6',fmt,false);
+  bar('cEpp',byEpp.map(p=>p.pillar),byEpp.map(p=>Math.round(p.epp)),'#9b8cff',fmt,false);
 
-  // stacked engagement by pillar x platform
-  const fp=document.getElementById('fPlatform').value;
+  const fp=platVal();
   const plats=[...new Set(DATA.summary.map(r=>r.platform))].filter(p=>!fp||p===fp);
   const pilNames=byEng.map(p=>p.pillar);
   const ds=plats.map(pl=>({label:pl,backgroundColor:PLAT_COLORS[pl]||'#888',
@@ -161,40 +195,71 @@ function render(){
       plugins:{legend:{position:'top'},datalabels:{display:false},
         tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)}}}}});
 
-  renderTable(pil);
+  renderPillarTable(pil);
+}
+function renderPillarTable(pil){
+  const arr=pil.slice().sort((a,b)=> sortKey==='pillar'
+    ? (a.pillar>b.pillar?sortDir:a.pillar<b.pillar?-sortDir:0) : (a[sortKey]-b[sortKey])*sortDir);
+  const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
+  arr.forEach(p=>{const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(p.pillar)}</td><td class="num">${p.posts.toLocaleString()}</td>
+      <td class="num">${p.impressions.toLocaleString()}</td><td class="num">${p.engagement.toLocaleString()}</td>
+      <td class="num">${pct(p.rate)}</td><td class="num">${Math.round(p.epp).toLocaleString()}</td>`;
+    tb.appendChild(tr);});
 }
 
-function renderTable(pil){
-  const arr=pil.slice().sort((a,b)=> sortKey==='pillar'
-    ? (a.pillar>b.pillar?sortDir:a.pillar<b.pillar?-sortDir:0)
-    : (a[sortKey]-b[sortKey])*sortDir);
-  const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
-  arr.forEach(p=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${p.pillar}</td>
-      <td class="num">${p.posts.toLocaleString()}</td>
-      <td class="num">${p.impressions.toLocaleString()}</td>
-      <td class="num">${p.engagement.toLocaleString()}</td>
-      <td class="num">${pct(p.rate)}</td>
-      <td class="num">${Math.round(p.epp).toLocaleString()}</td>`;
-    tb.appendChild(tr);
-  });
+function filteredPosts(){
+  const fp=platVal();
+  const fpi=document.getElementById('pPillar').value;
+  const from=document.getElementById('dFrom').value, to=document.getElementById('dTo').value;
+  let arr=(DATA.posts||[]).filter(p=>
+    (!fp||p.network===fp)&&(!fpi||p.pillar===fpi)&&
+    (!from||(p.date||'')>=from)&&(!to||(p.date||'')<=to));
+  const f=document.getElementById('sortField').value;
+  const dir=document.getElementById('sortDir').value==='asc'?1:-1;
+  arr.sort((a,b)=> f==='date' ? (a.date>b.date?dir:a.date<b.date?-dir:0) : (a[f]-b[f])*dir);
+  return arr;
 }
+function renderPosts(){
+  const arr=filteredPosts();
+  const pages=Math.max(1,Math.ceil(arr.length/PER));
+  if(PAGE>pages)PAGE=pages;
+  const start=(PAGE-1)*PER, slice=arr.slice(start,start+PER);
+  const tb=document.querySelector('#tPosts tbody'); tb.innerHTML='';
+  slice.forEach((p,i)=>{const col=PLAT_COLORS[p.network]||'#9aa3b2';const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${start+i+1}</td><td style="white-space:nowrap">${p.date||''}</td>
+      <td><span class="badge" style="background:${col}22;color:${col}">${esc(p.network)}</span></td>
+      <td>${esc(p.pillar)}</td><td>${esc(p.profile)}</td>
+      <td class="num">${(p.engagement||0).toLocaleString()}</td><td class="num">${(p.impressions||0).toLocaleString()}</td>
+      <td class="msg">${esc(p.message)}</td>
+      <td>${p.link?`<a href="${p.link}" target="_blank">เปิด ↗</a>`:''}</td>`;
+    tb.appendChild(tr);});
+  document.getElementById('pageInfo').textContent=`${arr.length?start+1:0}-${Math.min(start+PER,arr.length)} จาก ${arr.length} โพสต์ · หน้า ${PAGE}/${pages}`;
+  document.getElementById('prev').disabled=PAGE<=1;
+  document.getElementById('next').disabled=PAGE>=pages;
+}
+function renderAll(){renderCharts();renderPosts();}
 
 fetch('content-data.json?'+Date.now()).then(r=>r.json()).then(d=>{
-  DATA=d;
-  const m=d.meta||{};
-  document.getElementById('sub').textContent=`ข้อมูล: ${m.source||''} · เดือน ${m.month||''} · อัปเดต ${m.generatedAt||''}`;
-  document.getElementById('foot').textContent='วิเคราะห์จาก Raw Data by Pillar (Platform × Pillar) · ดึงสดจาก Google Sheet';
+  DATA=d; const m=d.meta||{};
+  document.getElementById('sub').textContent=`ข้อมูล: ${m.source||''} · เดือน ${m.month||''} · อัปเดต ${m.generatedAt||''} · ${(d.posts||[]).length} โพสต์`;
+  document.getElementById('foot').textContent='วิเคราะห์จาก Raw Data by Pillar · ดึงสดจาก Google Sheet';
   const plats=[...new Set(d.summary.map(r=>r.platform))];
+  const pils=[...new Set(d.summary.map(r=>r.pillar))];
   plats.forEach(p=>document.getElementById('fPlatform').innerHTML+=`<option>${p}</option>`);
-  document.getElementById('fPlatform').onchange=render;
-  document.querySelectorAll('th.sortable').forEach(th=>th.onclick=()=>{
-    const s=th.dataset.s;
-    if(sortKey===s) sortDir=-sortDir; else { sortKey=s; sortDir = s==='pillar'?1:-1; }
-    render();
-  });
-  render();
+  pils.forEach(p=>document.getElementById('pPillar').innerHTML+=`<option>${p}</option>`);
+  document.getElementById('fPlatform').onchange=()=>{PAGE=1;renderAll();};
+  ['pPillar','dFrom','dTo','sortField','sortDir'].forEach(id=>document.getElementById(id).onchange=()=>{PAGE=1;renderPosts();});
+  document.getElementById('prev').onclick=()=>{if(PAGE>1){PAGE--;renderPosts();}};
+  document.getElementById('next').onclick=()=>{PAGE++;renderPosts();};
+  document.querySelectorAll('#tbl th.sortable').forEach(th=>th.onclick=()=>{
+    const s=th.dataset.s; if(sortKey===s)sortDir=-sortDir; else{sortKey=s;sortDir=s==='pillar'?1:-1;} renderCharts();});
+  document.querySelectorAll('#tPosts th.sortable').forEach(th=>th.onclick=()=>{
+    const s=th.dataset.s, sf=document.getElementById('sortField'), sd=document.getElementById('sortDir');
+    if(sf.value===s)sd.value=sd.value==='desc'?'asc':'desc'; else{sf.value=s;sd.value='desc';} PAGE=1; renderPosts();});
+  const dates=(d.posts||[]).map(p=>p.date).filter(Boolean).sort();
+  if(dates.length){document.getElementById('dFrom').min=dates[0];document.getElementById('dTo').max=dates[dates.length-1];}
+  renderAll();
 }).catch(e=>{document.getElementById('sub').textContent='โหลดข้อมูลไม่สำเร็จ';console.error(e);});
 </script>
 </body>

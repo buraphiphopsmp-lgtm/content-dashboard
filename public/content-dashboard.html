@@ -19,6 +19,10 @@
   h1{font-size:24px;margin:0}
   .sub{color:var(--muted);font-size:13px;margin-top:4px}
   .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .nav{display:flex;gap:8px;margin-bottom:18px}
+  .nav a{padding:8px 16px;border-radius:10px;border:1px solid var(--line);color:var(--muted);
+    background:var(--card);font-weight:600;font-size:13px}
+  .nav a.active{background:var(--accent);color:#fff;border-color:var(--accent)}
   select,input[type=date]{background:var(--card2);color:var(--txt);border:1px solid var(--line);
     border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit}
   label.fl{color:var(--muted);font-size:12px;margin-right:4px}
@@ -63,6 +67,11 @@
       <span><label class="fl">Pillar</label><select id="fPillar"><option value="">ทั้งหมด</option></select></span>
     </div>
   </header>
+
+  <nav class="nav">
+    <a href="/" class="active">📊 ภาพรวม</a>
+    <a href="/pillar-analysis.html">🎯 วิเคราะห์ตาม Pillar</a>
+  </nav>
 
   <div class="kpis">
     <div class="kpi"><div class="label">Impressions รวม</div><div class="val" id="kImp">–</div></div>
@@ -167,7 +176,7 @@ function renderCharts(){
   makeChart('cImpPlat','bar',platLabels,platLabels.map(p=>byPlat[p].impressions),
     {ds:{backgroundColor:platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff'),borderRadius:6},
      options:{indexAxis:'y',layout:{padding:{right:48}},scales:{x:{ticks:{callback:fmt}}},
-       plugins:{datalabels:dl('#cdd6e6','end','right')}}});
+       plugins:{legend:{display:false},datalabels:dl('#cdd6e6','end','right')}}});
 
   makeChart('cPostsPlat','doughnut',platLabels,platLabels.map(p=>byPlat[p].posts),
     {legend:true,ds:{backgroundColor:platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff')},
@@ -179,7 +188,7 @@ function renderCharts(){
   makeChart('cEngPillar','bar',pilLabels,pilLabels.map(p=>byPil[p].reactions),
     {ds:{backgroundColor:'#27c4a6',borderRadius:6},
      options:{layout:{padding:{top:24}},scales:{y:{ticks:{callback:fmt}}},
-       plugins:{datalabels:dl('#cdd6e6','end','top')}}});
+       plugins:{legend:{display:false},datalabels:dl('#cdd6e6','end','top')}}});
 
   const rateLabels=pilLabels.slice().sort((a,b)=>
     (byPil[b].reactions/(byPil[b].impressions||1))-(byPil[a].reactions/(byPil[a].impressions||1)));

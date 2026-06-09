@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Performance Dashboard – SMP</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1115; --card:#191c24; --card2:#21252f; --line:#2b303c;
+    --txt:#e7eaf0; --muted:#9aa3b2; --accent:#5b8cff; --accent2:#27c4a6;
+    --fb:#1877f2; --ig:#e1306c; --tt:#00d3c7; --x:#9aa3b2; --yt:#ff0000;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:'Segoe UI',Tahoma,'Sarabun',system-ui,sans-serif;font-size:14px}
+  .wrap{max-width:1280px;margin:0 auto;padding:24px}
+  header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
+  h1{font-size:24px;margin:0}
+  .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+  select{background:var(--card2);color:var(--txt);border:1px solid var(--line);
+    border-radius:8px;padding:8px 12px;font-size:14px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .kpi .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .kpi .val{font-size:26px;font-weight:700;margin-top:6px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .card h3{margin:0 0 12px;font-size:15px;font-weight:600}
+  .full{grid-column:1 / -1}
+  canvas{max-height:300px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+  td.num,th.num{text-align:right;white-space:nowrap}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+  .msg{color:var(--muted);max-width:420px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .foot{color:var(--muted);font-size:12px;margin-top:18px;text-align:center}
+  @media(max-width:880px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>📊 Content Performance Dashboard</h1>
+      <div class="sub" id="sub">กำลังโหลดข้อมูล…</div>
+    </div>
+    <div class="filters">
+      <select id="fPlatform"><option value="">ทุกแพลตฟอร์ม</option></select>
+      <select id="fPillar"><option value="">ทุก Pillar</option></select>
+    </div>
+  </header>
+
+  <div class="kpis">
+    <div class="kpi"><div class="label">Impressions รวม</div><div class="val" id="kImp">–</div></div>
+    <div class="kpi"><div class="label">Engagement รวม</div><div class="val" id="kEng">–</div></div>
+    <div class="kpi"><div class="label">จำนวนโพสต์</div><div class="val" id="kPosts">–</div></div>
+    <div class="kpi"><div class="label">Engagement Rate</div><div class="val" id="kRate">–</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h3>Impressions ตามแพลตฟอร์ม</h3><canvas id="cImpPlat"></canvas></div>
+    <div class="card"><h3>สัดส่วนจำนวนโพสต์ตามแพลตฟอร์ม</h3><canvas id="cPostsPlat"></canvas></div>
+    <div class="card"><h3>Engagement ตาม Content Pillar</h3><canvas id="cEngPillar"></canvas></div>
+    <div class="card"><h3>Engagement Rate ตาม Pillar</h3><canvas id="cRatePillar"></canvas></div>
+  </div>
+
+  <div class="card full">
+    <h3>🏆 Top Posts (เรียงตาม Engagement)</h3>
+    <div style="overflow-x:auto">
+    <table id="tPosts">
+      <thead><tr>
+        <th>#</th><th>Network</th><th>Pillar</th><th>Profile</th>
+        <th class="num">Engagement</th><th class="num">Impressions</th><th>Message</th><th>Link</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+const PLAT_COLORS = {Facebook:'#1877f2',Instagram:'#e1306c',TikTok:'#00d3c7',X:'#9aa3b2',YouTube:'#ff0000'};
+const fmt = n => n>=1e6 ? (n/1e6).toFixed(2)+'M' : n>=1e3 ? (n/1e3).toFixed(1)+'K' : Math.round(n).toLocaleString();
+const pct = n => (n*100).toFixed(2)+'%';
+let DATA, charts={};
+
+Chart.defaults.color = '#9aa3b2';
+Chart.defaults.borderColor = '#2b303c';
+Chart.defaults.font.family = "'Segoe UI',Tahoma,'Sarabun',sans-serif";
+
+function groupSum(rows, key){
+  const m={};
+  for(const r of rows){
+    const k=r[key]||'(ไม่ระบุ)';
+    if(!m[k]) m[k]={reactions:0,impressions:0,posts:0};
+    m[k].reactions+=r.reactions; m[k].impressions+=r.impressions; m[k].posts+=r.posts;
+  }
+  return m;
+}
+
+function makeChart(id, type, labels, data, opts){
+  if(charts[id]) charts[id].destroy();
+  charts[id]=new Chart(document.getElementById(id), {type, data:{labels, datasets:[Object.assign({data},opts.ds||{})]},
+    options:Object.assign({responsive:true,plugins:{legend:{display:opts.legend||false}}}, opts.options||{})});
+}
+
+function render(){
+  const fp=document.getElementById('fPlatform').value;
+  const fpi=document.getElementById('fPillar').value;
+  let rows=DATA.summary.filter(r=>(!fp||r.platform===fp)&&(!fpi||r.pillar===fpi));
+
+  // KPIs
+  const tImp=rows.reduce((s,r)=>s+r.impressions,0);
+  const tEng=rows.reduce((s,r)=>s+r.reactions,0);
+  const tPosts=rows.reduce((s,r)=>s+r.posts,0);
+  document.getElementById('kImp').textContent=fmt(tImp);
+  document.getElementById('kEng').textContent=fmt(tEng);
+  document.getElementById('kPosts').textContent=tPosts.toLocaleString();
+  document.getElementById('kRate').textContent= tImp? pct(tEng/tImp):'–';
+
+  // Impressions by platform
+  const byPlat=groupSum(rows,'platform');
+  const platLabels=Object.keys(byPlat).sort((a,b)=>byPlat[b].impressions-byPlat[a].impressions);
+  makeChart('cImpPlat','bar',platLabels,platLabels.map(p=>byPlat[p].impressions),
+    {ds:{backgroundColor:platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff'),borderRadius:6},
+     options:{indexAxis:'y',scales:{x:{ticks:{callback:fmt}}}}});
+
+  // Posts share by platform
+  makeChart('cPostsPlat','doughnut',platLabels,platLabels.map(p=>byPlat[p].posts),
+    {legend:true,ds:{backgroundColor:platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff')},
+     options:{plugins:{legend:{position:'right'}}}});
+
+  // Engagement by pillar
+  const byPil=groupSum(rows,'pillar');
+  const pilLabels=Object.keys(byPil).sort((a,b)=>byPil[b].reactions-byPil[a].reactions);
+  makeChart('cEngPillar','bar',pilLabels,pilLabels.map(p=>byPil[p].reactions),
+    {ds:{backgroundColor:'#27c4a6',borderRadius:6},options:{scales:{y:{ticks:{callback:fmt}}}}});
+
+  // Engagement rate by pillar
+  const rateLabels=pilLabels.slice().sort((a,b)=>
+    (byPil[b].reactions/(byPil[b].impressions||1))-(byPil[a].reactions/(byPil[a].impressions||1)));
+  makeChart('cRatePillar','bar',rateLabels,
+    rateLabels.map(p=>byPil[p].impressions? byPil[p].reactions/byPil[p].impressions*100:0),
+    {ds:{backgroundColor:'#5b8cff',borderRadius:6},
+     options:{scales:{y:{ticks:{callback:v=>v+'%'}}},plugins:{tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)+'%'}}}}});
+
+  // Top posts table (respects platform/pillar filter via network/pillar)
+  const tb=document.querySelector('#tPosts tbody'); tb.innerHTML='';
+  let posts=DATA.topPosts.filter(p=>
+    (!fp||(p.network||'').toUpperCase()===fp.toUpperCase())&&(!fpi||p.pillar===fpi));
+  posts.slice(0,20).forEach((p,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i+1}</td>
+      <td><span class="badge" style="background:${(PLAT_COLORS[cap(p.network)]||'#5b8cff')}22;color:${PLAT_COLORS[cap(p.network)]||'#9aa3b2'}">${p.network}</span></td>
+      <td>${p.pillar}</td><td>${esc(p.profile)}</td>
+      <td class="num">${p.engagement.toLocaleString()}</td>
+      <td class="num">${p.impressions.toLocaleString()}</td>
+      <td class="msg">${esc(p.message)}</td>
+      <td>${p.link?`<a href="${p.link}" target="_blank">เปิด ↗</a>`:''}</td>`;
+    tb.appendChild(tr);
+  });
+}
+const cap=s=>s?s.charAt(0)+s.slice(1).toLowerCase():s;
+const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function fillFilters(){
+  const plats=[...new Set(DATA.summary.map(r=>r.platform))];
+  const pils=[...new Set(DATA.summary.map(r=>r.pillar))];
+  plats.forEach(p=>document.getElementById('fPlatform').innerHTML+=`<option>${p}</option>`);
+  pils.forEach(p=>document.getElementById('fPillar').innerHTML+=`<option>${p}</option>`);
+  document.getElementById('fPlatform').onchange=render;
+  document.getElementById('fPillar').onchange=render;
+}
+
+fetch('content-data.json?'+Date.now()).then(r=>r.json()).then(d=>{
+  DATA=d;
+  document.getElementById('sub').textContent=
+    `ข้อมูล: ${d.meta.source} · เดือน ${d.meta.month} · อัปเดตล่าสุด ${d.meta.generatedAt} · วิเคราะห์ ${d.meta.postsAnalyzed} โพสต์`;
+  document.getElementById('foot').textContent=
+    `รันคำสั่ง  npm run update-data  เพื่อดึงข้อมูลล่าสุดจาก Google Sheet เข้าสู่ Dashboard`;
+  fillFilters(); render();
+}).catch(e=>{
+  document.getElementById('sub').textContent='โหลด content-data.json ไม่สำเร็จ — รันผ่าน  npm start  แล้วเปิด http://localhost:3000/content-dashboard.html';
+  console.error(e);
+});
+</script>
+</body>
+</html>

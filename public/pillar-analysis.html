@@ -225,7 +225,8 @@ function renderCharts(){
   charts.cStack=new Chart(document.getElementById('cStack'),{type:'bar',
     data:{labels:pilNames,datasets:ds},
     options:{responsive:true,scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:fmt}}},
-      plugins:{legend:{position:'top',labels:{filter:(it)=>!B||(ds[it.datasetIndex]&&ds[it.datasetIndex].stack==='p')}},
+      plugins:{legend:{position:'top',labels:{filter:(it)=>!B||(ds[it.datasetIndex]&&ds[it.datasetIndex].stack==='p')},
+        onClick:(e,item,legend)=>{const ch=legend.chart,lb=item.text,vis=ch.isDatasetVisible(item.datasetIndex);ch.data.datasets.forEach((d,i)=>{if(d.label===lb)ch.setDatasetVisibility(i,!vis);});ch.update();}},
         datalabels:{display:'auto',clamp:true,color:c=>contrast(c.dataset.backgroundColor),anchor:'center',align:'center',font:{weight:'700',size:9},formatter:x=>x>0?fmt(x):''},
         tooltip:{callbacks:{label:c=>`${c.dataset.label} (${c.dataset.stack==='c'?labB:labA}): ${fmt(c.parsed.y)}`}}}}});
 

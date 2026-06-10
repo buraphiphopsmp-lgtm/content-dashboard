@@ -93,9 +93,13 @@
   </div>
 
   <div class="card">
-    <h3>Bubble: Impressions × Engagement (รายโพสต์ · ช่วง A)</h3>
-    <canvas id="cScatter" style="max-height:460px"></canvas>
-    <div style="color:var(--muted);font-size:12px;margin-top:10px">แต่ละจุด = 1 โพสต์ · สี = Pillar · ขนาดจุด = Engagement Rate · เส้นประ = ค่าเฉลี่ย (แบ่ง 4 โซน) · อิงช่วง A + แพลตฟอร์มที่เลือก</div>
+    <div class="tbar">
+      <h3 style="margin:0">Quadrant: Engagement × Impressions (ช่วง A)</h3>
+      <div class="left"><label class="fl">จัดกลุ่มตาม</label>
+        <select id="scGroup"><option value="pillar">Pillar</option><option value="network">แพลตฟอร์ม</option></select></div>
+    </div>
+    <canvas id="cScatter" style="max-height:480px"></canvas>
+    <div style="color:var(--muted);font-size:12px;margin-top:10px">แต่ละจุด = 1 กลุ่ม · แกน X = Impressions รวม (Volume) · แกน Y = Engagement เฉลี่ย/โพสต์ (Impact) · <b>ขนาดจุด = Engagement รวม</b> · เส้นประ = ค่าเฉลี่ย แบ่ง 4 โซน · อิงช่วง A + แพลตฟอร์มที่เลือก</div>
   </div>
 
   <div class="card">
@@ -288,24 +292,37 @@ let scatterChart;
 function pillarColorMap(){const ps=[...new Set((DATA.posts||[]).map(p=>p.pillar).filter(Boolean))].sort();const m={};ps.forEach((p,i)=>m[p]=PALETTE[i%PALETTE.length]);return m;}
 function renderScatter(){
   const A=periodPosts(v('aFrom'),v('aTo')).filter(p=>p.impressions>0);
-  const cmap=pillarColorMap();
-  const pillars=[...new Set(A.map(p=>p.pillar))];
-  const datasets=pillars.map(pl=>({label:pl,backgroundColor:(cmap[pl]||'#888')+'cc',borderColor:cmap[pl]||'#888',
-    data:A.filter(p=>p.pillar===pl).map(p=>{const rate=p.impressions?p.engagement/p.impressions:0;return {x:p.impressions,y:p.engagement,r:Math.max(4,Math.min(22,4+rate*140)),rate,m:p.message};})}));
-  const n=A.length||1;
-  const avgX=A.reduce((s,p)=>s+p.impressions,0)/n, avgY=A.reduce((s,p)=>s+p.engagement,0)/n;
-  const quad={id:'quad',afterDatasetsDraw:(ch)=>{const ca=ch.chartArea;if(!ca)return;const ctx=ch.ctx,px=ch.scales.x.getPixelForValue(avgX),py=ch.scales.y.getPixelForValue(avgY);
-    ctx.save();ctx.strokeStyle='rgba(255,255,255,.28)';ctx.setLineDash([5,4]);ctx.lineWidth=1;
+  const dim=v('scGroup')||'pillar';
+  const g={};
+  A.forEach(p=>{const k=p[dim]||'(ไม่ระบุ)';if(!g[k])g[k]={k,imp:0,eng:0,n:0};g[k].imp+=p.impressions;g[k].eng+=p.engagement;g[k].n++;});
+  const arr=Object.values(g).map(o=>({k:o.k,x:o.imp,y:o.eng/o.n,tot:o.eng,n:o.n}));
+  const cmap=dim==='network'?PLAT_COLORS:pillarColorMap();
+  const maxTot=Math.max(1,...arr.map(o=>o.tot));
+  const datasets=arr.map(o=>({label:o.k,backgroundColor:(cmap[o.k]||'#888')+'cc',borderColor:cmap[o.k]||'#888',
+    data:[{x:o.x,y:o.y,r:9+Math.sqrt(o.tot/maxTot)*34,n:o.n,tot:o.tot}]}));
+  const m=arr.length||1;
+  const avgX=arr.reduce((s,o)=>s+o.x,0)/m, avgY=arr.reduce((s,o)=>s+o.y,0)/m;
+  const quad={id:'quad',beforeDatasetsDraw:(ch)=>{const ca=ch.chartArea;if(!ca)return;const ctx=ch.ctx,px=ch.scales.x.getPixelForValue(avgX),py=ch.scales.y.getPixelForValue(avgY);
+    ctx.save();
+    ctx.fillStyle='rgba(91,140,255,.10)';ctx.fillRect(ca.left,ca.top,px-ca.left,py-ca.top);
+    ctx.fillStyle='rgba(39,196,166,.12)';ctx.fillRect(px,ca.top,ca.right-px,py-ca.top);
+    ctx.fillStyle='rgba(255,107,107,.10)';ctx.fillRect(ca.left,py,px-ca.left,ca.bottom-py);
+    ctx.fillStyle='rgba(155,140,255,.13)';ctx.fillRect(px,py,ca.right-px,ca.bottom-py);
+    ctx.textAlign='center';ctx.font='600 12px sans-serif';
+    ctx.fillStyle='rgba(120,160,255,.95)';ctx.fillText('High Impact · Low Volume',(ca.left+px)/2,ca.top+18);
+    ctx.fillStyle='rgba(39,196,166,.95)';ctx.fillText('High Engagement · High Volume',(px+ca.right)/2,ca.top+18);
+    ctx.fillStyle='rgba(255,107,107,.95)';ctx.fillText('Low Impact · Low Volume',(ca.left+px)/2,py+18);
+    ctx.fillStyle='rgba(170,150,255,.98)';ctx.fillText('Low Impact · High Volume',(px+ca.right)/2,py+18);
+    ctx.setLineDash([5,4]);ctx.strokeStyle='rgba(255,255,255,.32)';ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(px,ca.top);ctx.lineTo(px,ca.bottom);ctx.stroke();
     ctx.beginPath();ctx.moveTo(ca.left,py);ctx.lineTo(ca.right,py);ctx.stroke();
-    ctx.setLineDash([]);ctx.fillStyle='rgba(231,234,240,.55)';ctx.font='11px sans-serif';
-    ctx.fillText('avg Imp '+fmt(avgX),px+4,ca.top+12);ctx.fillText('avg Eng '+fmt(avgY),ca.left+6,py-4);ctx.restore();}};
+    ctx.restore();}};
   if(scatterChart)scatterChart.destroy();
   scatterChart=new Chart(document.getElementById('cScatter'),{type:'bubble',data:{datasets},
-    options:{responsive:true,
-      scales:{x:{title:{display:true,text:'Impressions',color:'#9aa3b2'},ticks:{callback:fmt}},y:{title:{display:true,text:'Engagement',color:'#9aa3b2'},ticks:{callback:fmt}}},
+    options:{responsive:true,layout:{padding:{top:8}},
+      scales:{x:{title:{display:true,text:'Impressions รวม (Volume)',color:'#9aa3b2'},ticks:{callback:fmt}},y:{title:{display:true,text:'Engagement เฉลี่ย/โพสต์ (Impact)',color:'#9aa3b2'},ticks:{callback:fmt}}},
       plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8}},datalabels:{display:false},
-        tooltip:{callbacks:{title:c=>c[0].dataset.label,label:c=>'Imp '+c.raw.x.toLocaleString()+' · Eng '+c.raw.y.toLocaleString()+' · Rate '+(c.raw.rate*100).toFixed(2)+'%',afterLabel:c=>(c.raw.m||'').slice(0,80)}}}},
+        tooltip:{callbacks:{title:c=>c[0].dataset.label,label:c=>'โพสต์ '+c.raw.n+' · Imp รวม '+fmt(c.raw.x)+' · Eng เฉลี่ย '+fmt(Math.round(c.raw.y))+' · Eng รวม '+fmt(c.raw.tot)}}}},
     plugins:[quad]});
 }
 function renderAll(){renderCharts();renderScatter();renderPosts();}
@@ -333,6 +350,7 @@ loadData(false).then(()=>{
   pils.forEach(p=>document.getElementById('tPillar').innerHTML+=`<option>${p}</option>`);
   document.getElementById('refresh').onclick=()=>loadData(true);
   document.getElementById('apply').onclick=()=>{PAGE=1;renderAll();};
+  document.getElementById('scGroup').onchange=renderScatter;
   document.getElementById('clear').onclick=()=>{['aFrom','aTo','bFrom','bTo','fPlatform','tPillar'].forEach(id=>document.getElementById(id).value='');PAGE=1;renderAll();};
   ['tPillar','sortField','sortDir'].forEach(id=>document.getElementById(id).onchange=()=>{PAGE=1;renderPosts();});
   document.getElementById('prev').onclick=()=>{if(PAGE>1){PAGE--;renderPosts();}};

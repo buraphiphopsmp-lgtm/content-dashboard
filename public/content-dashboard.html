@@ -143,8 +143,8 @@ function render(){
      datasets:[{data:platLabels.map(p=>byPlat[p].posts),backgroundColor:postCols,label:labP}]
        .concat(cmp?[{data:platLabels.map(p=>cByPlat[p]?cByPlat[p].posts:0),backgroundColor:postCols.map(c=>c+'66'),label:labC,weight:0.5}]:[]),
      options:{plugins:{legend:{position:'right'},
-       datalabels:{color:c=>contrast((c.dataset.backgroundColor[c.dataIndex]||'#888888').slice(0,7)),font:{weight:'700',size:11},formatter:(v,c)=>c.datasetIndex===0&&v>0?v:''},
-       tooltip:{callbacks:{label:c=>`${c.label} (${c.datasetIndex===0?labP:labC}): ${c.parsed}`}}}}});
+       datalabels:{color:c=>contrast((c.dataset.backgroundColor[c.dataIndex]||'#888888').slice(0,7)),font:{weight:'700',size:10},formatter:(v,c)=>{if(c.datasetIndex!==0||!v)return '';const t=c.dataset.data.reduce((s,x)=>s+(x||0),0);return t?Math.round(v/t*100)+'% ('+v.toLocaleString()+')':'';}},
+       tooltip:{callbacks:{label:c=>{const t=c.dataset.data.reduce((s,x)=>s+(x||0),0);return `${c.label} (${c.datasetIndex===0?labP:labC}): ${t?Math.round(c.parsed/t*100):0}% (${c.parsed.toLocaleString()})`;}}}}}});
 
   const byPil=groupSum(rows,'pillar');
   const cByPil=cmp?groupSum(cmp,'pillar'):null;

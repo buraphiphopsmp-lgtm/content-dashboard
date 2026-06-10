@@ -337,7 +337,7 @@ function renderScatter(){
   scatterChart=new Chart(document.getElementById('cScatter'),{type:'bubble',data:{datasets},
     options:{responsive:true,layout:{padding:{top:8}},
       scales:{x:{min:-maxX*0.05,suggestedMax:maxX*1.1,title:{display:true,text:'Impressions เฉลี่ย/โพสต์ (Reach)',color:'#9aa3b2'},ticks:{callback:val=>val<0?'':fmt(val)}},y:{min:-maxY*0.08,suggestedMax:maxY*1.14,title:{display:true,text:'Engagement เฉลี่ย/โพสต์ (Impact)',color:'#9aa3b2'},ticks:{callback:val=>val<0?'':fmt(val)}}},
-      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,generateLabels:(ch)=>ch.data.datasets.map((ds,i)=>({text:ds.label,fillStyle:ds._col,strokeStyle:ds._col,pointStyle:'circle',hidden:!ch.isDatasetVisible(i),datasetIndex:i}))}},datalabels:{display:false},
+      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#e7eaf0',generateLabels:(ch)=>ch.data.datasets.map((ds,i)=>({text:ds.label,fillStyle:ds._col,strokeStyle:ds._col,pointStyle:'circle',fontColor:'#e7eaf0',hidden:!ch.isDatasetVisible(i),datasetIndex:i}))}},datalabels:{display:false},
         tooltip:{callbacks:{title:c=>c[0].dataset.label+(hasCmp?' · ช่วง '+c[0].raw.per:''),label:c=>'โพสต์ '+c.raw.n+' · Imp เฉลี่ย '+fmt(Math.round(c.raw.x))+' · Eng เฉลี่ย '+fmt(Math.round(c.raw.y))}}}},
     plugins:[quad,arrows]});
 }

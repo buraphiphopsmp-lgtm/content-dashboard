@@ -17,6 +17,9 @@
   .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   select,input[type=date]{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit}
   label.fl{color:var(--muted);font-size:12px;margin-right:4px}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn:hover{filter:brightness(1.1)} .btn:disabled{opacity:.6;cursor:default}
+  .upd{display:inline-flex;align-items:center;gap:4px;background:rgba(39,196,166,.12);color:var(--accent2);border:1px solid rgba(39,196,166,.35);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:600;white-space:nowrap}
   .nav{display:flex;gap:8px;margin-bottom:18px}
   .nav a{padding:8px 16px;border-radius:10px;border:1px solid var(--line);color:var(--muted);background:var(--card);font-weight:600;font-size:13px;text-decoration:none}
   .nav a.active{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -59,6 +62,8 @@
       <span><label class="fl">แพลตฟอร์ม</label><select id="fPlatform"><option value="">ทุกแพลตฟอร์ม</option></select></span>
       <span><label class="fl">Pillar</label><select id="fPillar"><option value="">ทั้งหมด</option></select></span>
       <span><label class="fl">วันที่</label><input type="date" id="dFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="dTo"></span>
+      <button id="refresh" class="btn">🔄 รีเฟรชข้อมูล</button>
+      <span id="lastUpdate" class="upd"></span>
     </div>
   </header>
 
@@ -240,14 +245,27 @@ function renderPosts(){
 }
 function renderAll(){renderCharts();renderPosts();}
 
-fetch('content-data.json?'+Date.now()).then(r=>r.json()).then(d=>{
-  DATA=d; const m=d.meta||{};
-  document.getElementById('sub').textContent=`ข้อมูล: ${m.source||''} · เดือน ${m.month||''} · อัปเดต ${m.generatedAt||''} · ${(d.posts||[]).length} โพสต์`;
+function fmtUpdated(s){const m=(s||'').match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);if(!m)return s||'-';
+  const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]));
+  return d.toLocaleString('th-TH',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})+' น.';}
+function setSub(){const m=DATA.meta||{};
+  document.getElementById('sub').textContent=`ข้อมูล: ${m.source||''} · เดือน ${m.month||''} · ${(DATA.posts||[]).length} โพสต์`;
+  const el=document.getElementById('lastUpdate');if(el)el.textContent='🕒 อัปเดตล่าสุด: '+fmtUpdated(m.generatedAt);}
+function loadData(fresh){
+  const btn=document.getElementById('refresh');
+  if(btn){btn.disabled=true;btn.textContent='⏳ กำลังรีเฟรช...';}
+  return fetch('content-data.json?'+(fresh?'fresh=1&':'')+Date.now()).then(r=>r.json()).then(d=>{
+    DATA=d; setSub(); renderAll();
+  }).catch(e=>{document.getElementById('sub').textContent='โหลดข้อมูลไม่สำเร็จ';console.error(e);})
+   .finally(()=>{if(btn){btn.disabled=false;btn.textContent='🔄 รีเฟรชข้อมูล';}});
+}
+loadData(false).then(()=>{
   document.getElementById('foot').textContent='วิเคราะห์จาก Raw Data by Pillar · ดึงสดจาก Google Sheet';
-  const plats=[...new Set(d.summary.map(r=>r.platform))];
-  const pils=[...new Set(d.summary.map(r=>r.pillar))];
+  const plats=[...new Set(DATA.summary.map(r=>r.platform))];
+  const pils=[...new Set(DATA.summary.map(r=>r.pillar))];
   plats.forEach(p=>document.getElementById('fPlatform').innerHTML+=`<option>${p}</option>`);
   pils.forEach(p=>document.getElementById('fPillar').innerHTML+=`<option>${p}</option>`);
+  document.getElementById('refresh').onclick=()=>loadData(true);
   ['fPlatform','fPillar'].forEach(id=>document.getElementById(id).onchange=()=>{PAGE=1;renderAll();});
   ['dFrom','dTo','sortField','sortDir'].forEach(id=>document.getElementById(id).onchange=()=>{PAGE=1;renderPosts();});
   document.getElementById('prev').onclick=()=>{if(PAGE>1){PAGE--;renderPosts();}};
@@ -257,10 +275,9 @@ fetch('content-data.json?'+Date.now()).then(r=>r.json()).then(d=>{
   document.querySelectorAll('#tPosts th.sortable').forEach(th=>th.onclick=()=>{
     const s=th.dataset.s, sf=document.getElementById('sortField'), sd=document.getElementById('sortDir');
     if(sf.value===s)sd.value=sd.value==='desc'?'asc':'desc'; else{sf.value=s;sd.value='desc';} PAGE=1; renderPosts();});
-  const dates=(d.posts||[]).map(p=>p.date).filter(Boolean).sort();
+  const dates=(DATA.posts||[]).map(p=>p.date).filter(Boolean).sort();
   if(dates.length){document.getElementById('dFrom').min=dates[0];document.getElementById('dTo').max=dates[dates.length-1];}
-  renderAll();
-}).catch(e=>{document.getElementById('sub').textContent='โหลดข้อมูลไม่สำเร็จ';console.error(e);});
+});
 </script>
 </body>
 </html>

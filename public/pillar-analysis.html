@@ -12,20 +12,21 @@
   body{margin:0;background:var(--bg);color:var(--txt);font-family:'Segoe UI',Tahoma,'Sarabun',system-ui,sans-serif;font-size:14px}
   .wrap{max-width:1320px;margin:0 auto;padding:24px}
   .topbar{display:flex;flex-wrap:wrap;align-items:center;gap:18px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
-  .subbar{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px}
   h1{font-size:24px;margin:0}
   .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .subbar{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px}
   .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   select,input[type=date]{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit}
   label.fl{color:var(--muted);font-size:12px;margin-right:4px}
+  .pa{color:var(--accent2);font-weight:700} .pb{color:#9aa3b2;font-weight:700}
+  .nav{display:flex;gap:8px}
+  .nav a{padding:8px 16px;border-radius:10px;border:1px solid var(--line);color:var(--muted);background:var(--card);font-weight:600;font-size:13px;text-decoration:none}
+  .nav a.active{background:var(--accent);color:#fff;border-color:var(--accent)}
   .btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
   .btn:hover{filter:brightness(1.1)} .btn:disabled{opacity:.6;cursor:default}
   .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)} .btn.ghost:hover{color:var(--txt);filter:none}
   .dlt{font-size:12px;font-weight:700;white-space:nowrap}.dlt.up{color:#2ecc71}.dlt.down{color:#ff6b6b}
   .upd{display:inline-flex;align-items:center;gap:4px;background:rgba(39,196,166,.12);color:var(--accent2);border:1px solid rgba(39,196,166,.35);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:600;white-space:nowrap}
-  .nav{display:flex;gap:8px}
-  .nav a{padding:8px 16px;border-radius:10px;border:1px solid var(--line);color:var(--muted);background:var(--card);font-weight:600;font-size:13px;text-decoration:none}
-  .nav a.active{background:var(--accent);color:#fff;border-color:var(--accent)}
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
   .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
   .kpi .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
@@ -41,8 +42,7 @@
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
   th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
-  th.sortable{cursor:pointer;user-select:none}
-  th.sortable:hover{color:var(--txt)}
+  th.sortable{cursor:pointer;user-select:none} th.sortable:hover{color:var(--txt)}
   td.num,th.num{text-align:right;white-space:nowrap}
   .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
   .msg{color:var(--muted);max-width:360px}
@@ -67,11 +67,9 @@
   <div class="subbar">
     <div class="sub" id="sub">กำลังโหลดข้อมูล…</div>
     <div class="filters">
-      <span><label class="fl">เดือน</label><select id="fMonth"><option value="">ทั้งหมด</option></select></span>
-      <span><label class="fl">เทียบกับ</label><select id="fCompare"><option value="">—</option></select></span>
+      <span><label class="fl pa">ช่วง A</label><input type="date" id="aFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="aTo"></span>
+      <span><label class="fl pb">ช่วง B (เทียบ)</label><input type="date" id="bFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="bTo"></span>
       <span><label class="fl">แพลตฟอร์ม</label><select id="fPlatform"><option value="">ทุกแพลตฟอร์ม</option></select></span>
-      <span><label class="fl">Pillar</label><select id="fPillar"><option value="">ทั้งหมด</option></select></span>
-      <span><label class="fl">วันที่</label><input type="date" id="dFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="dTo"></span>
       <button id="apply" class="btn">ใช้ตัวกรอง</button>
       <button id="clear" class="btn ghost">ล้างตัวกรอง</button>
       <button id="refresh" class="btn">🔄 รีเฟรชข้อมูล</button>
@@ -115,9 +113,10 @@
 
   <div class="card">
     <div class="tbar">
-      <h3 style="margin:0">🏆 Top Posts (รายโพสต์ทั้งหมด)</h3>
+      <h3 style="margin:0">🏆 Top Posts (รายโพสต์)</h3>
       <div class="left">
-        <label class="fl">เรียงตาม</label>
+        <label class="fl">Pillar</label><select id="tPillar"><option value="">ทั้งหมด</option></select>
+        <label class="fl" style="margin-left:6px">เรียงตาม</label>
         <select id="sortField">
           <option value="engagement">Engagement</option>
           <option value="impressions">Impressions</option>
@@ -151,114 +150,114 @@
 const PLAT_COLORS={Facebook:'#1877F2',Instagram:'#E4405F',TikTok:'#25F4EE',X:'#E7E9EA',YouTube:'#FF0000'};
 const fmt=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':Math.round(n).toLocaleString();
 const pct=n=>(n*100).toFixed(2)+'%';
-const contrast=h=>{const c=(h||'').replace('#','').slice(0,6);const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return (0.299*r+0.587*g+0.114*b)/255>0.6?'#11151c':'#fff';};
-const MONTHS_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
-const monthOf=iso=>{const m=/^(\d{4})-(\d{2})/.exec(iso||'');return m?`${MONTHS_FULL[+m[2]-1]} ${m[1]}`:'';};
-function deltaHTML(cur,prev){if(prev===undefined||prev===null)return '';if(prev===0)return cur>0?'<span class="dlt up">▲ ใหม่</span>':'';const d=(cur-prev)/prev*100,up=d>=0;return `<span class="dlt ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(d).toFixed(1)}%</span>`;}
 const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const contrast=h=>{const c=(h||'').replace('#','').slice(0,6);const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return (0.299*r+0.587*g+0.114*b)/255>0.6?'#11151c':'#fff';};
+function deltaHTML(cur,prev){if(prev===undefined||prev===null)return '';if(prev===0)return cur>0?'<span class="dlt up">▲ ใหม่</span>':'';const d=(cur-prev)/prev*100,up=d>=0;return `<span class="dlt ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(d).toFixed(1)}%</span>`;}
 let DATA, charts={}, sortKey='engagement', sortDir=-1, PAGE=1, PER=20;
 
 Chart.register(ChartDataLabels);
 Chart.defaults.color='#9aa3b2'; Chart.defaults.borderColor='#2b303c';
 Chart.defaults.font.family="'Segoe UI',Tahoma,'Sarabun',sans-serif";
 
-const platVal=()=>document.getElementById('fPlatform').value;
-const pillarVal=()=>document.getElementById('fPillar').value;
-const monthVal=()=>document.getElementById('fMonth').value;
-function scopedRows(){const fm=monthVal(),fp=platVal(),fpi=pillarVal();return DATA.summary.filter(r=>(!fm||r.month===fm)&&(!fp||r.platform===fp)&&(!fpi||fpi.includes(r.pillar)));}
-function byPillar(rows){
+const v=id=>document.getElementById(id).value;
+const platVal=()=>v('fPlatform');
+const fmtRange=(from,to)=>(!from&&!to)?'ทั้งหมด':((from||'…')+' – '+(to||'…'));
+const inRange=(d,from,to)=>(!from||d>=from)&&(!to||d<=to);
+function periodPosts(from,to){const fp=platVal();return (DATA.posts||[]).filter(p=>(!fp||p.network===fp)&&inRange(p.date||'',from,to));}
+function aggPillar(arr){
   const m={};
-  for(const r of rows){if(!m[r.pillar])m[r.pillar]={pillar:r.pillar,impressions:0,engagement:0,posts:0};
-    m[r.pillar].impressions+=r.impressions;m[r.pillar].engagement+=r.reactions;m[r.pillar].posts+=r.posts;}
+  for(const p of arr){const k=p.pillar||'(ไม่ระบุ)';
+    if(!m[k])m[k]={pillar:k,impressions:0,engagement:0,posts:0};
+    m[k].impressions+=p.impressions; m[k].engagement+=p.engagement; m[k].posts+=1;}
   return Object.values(m).map(x=>({...x,rate:x.impressions?x.engagement/x.impressions:0,epp:x.posts?x.engagement/x.posts:0}));
 }
-function bar(id,labels,data,color,fmtFn,horizontal,compareData){
+const engPN=(arr,pillar,net)=>arr.filter(p=>p.pillar===pillar&&p.network===net).reduce((s,p)=>s+p.engagement,0);
+
+function bar(id,labels,data,color,fmtFn,horizontal,compareData,labA,labB){
   if(charts[id])charts[id].destroy();
   const hasC=!!compareData;
-  const datasets=[{data,backgroundColor:color,borderRadius:6,label:(document.getElementById('fMonth').value||'ช่วงหลัก')}];
-  if(hasC)datasets.push({data:compareData,backgroundColor:'#5a6473',borderRadius:6,label:document.getElementById('fCompare').value});
+  const datasets=[{data,backgroundColor:color,borderRadius:6,label:labA||'ช่วง A'}];
+  if(hasC)datasets.push({data:compareData,backgroundColor:'#5a6473',borderRadius:6,label:labB||'ช่วง B'});
   charts[id]=new Chart(document.getElementById(id),{type:'bar',
     data:{labels,datasets},
     options:{responsive:true,indexAxis:horizontal?'y':'x',
       layout:{padding:horizontal?{right:54}:{top:hasC?46:24}},
       scales:horizontal?{x:{ticks:{callback:fmtFn}}}:{y:{ticks:{callback:fmtFn}}},
       plugins:{legend:{display:hasC,labels:{boxWidth:12}},
-        datalabels:{color:'#cdd6e6',anchor:'end',align:horizontal?'right':'top',rotation:(!horizontal&&hasC)?-90:0,font:{weight:'600',size:hasC?9:11},formatter:v=>v>0?fmtFn(v):''}}}});
+        datalabels:{color:'#cdd6e6',anchor:'end',align:horizontal?'right':'top',rotation:(!horizontal&&hasC)?-90:0,font:{weight:'600',size:hasC?9:11},formatter:x=>x>0?fmtFn(x):''}}}});
 }
+
 function renderCharts(){
-  const rows=scopedRows();
-  const pil=byPillar(rows).filter(p=>p.posts>0||p.engagement>0);
-  const top=(k)=>pil.slice().sort((a,b)=>b[k]-a[k])[0];
+  const aFrom=v('aFrom'),aTo=v('aTo'),bFrom=v('bFrom'),bTo=v('bTo');
+  const hasCmp=!!(bFrom||bTo);
+  const A=periodPosts(aFrom,aTo), B=hasCmp?periodPosts(bFrom,bTo):null;
+  const labA=fmtRange(aFrom,aTo), labB=fmtRange(bFrom,bTo);
+  const pilA=aggPillar(A).filter(p=>p.posts>0);
+  const cmpMap={}; if(B)aggPillar(B).forEach(x=>cmpMap[x.pillar]=x);
+
+  const top=(k)=>pilA.slice().sort((a,b)=>b[k]-a[k])[0];
   const tE=top('engagement'),tR=top('rate'),tI=top('impressions'),tP=top('epp');
-  const set=(id,v)=>document.getElementById(id).textContent=v;
-  if(tE){set('kTopEng',tE.pillar);set('kTopEngV',fmt(tE.engagement)+' engagement');}
-  if(tR){set('kTopRate',tR.pillar);set('kTopRateV',pct(tR.rate));}
-  if(tI){set('kTopImp',tI.pillar);set('kTopImpV',fmt(tI.impressions)+' impressions');}
-  if(tP){set('kTopEpp',tP.pillar);set('kTopEppV',Math.round(tP.epp).toLocaleString()+' /โพสต์');}
+  const set=(id,t)=>document.getElementById(id).textContent=t;
+  set('kTopEng',tE?tE.pillar:'–'); set('kTopEngV',tE?fmt(tE.engagement)+' engagement':'');
+  set('kTopRate',tR?tR.pillar:'–'); set('kTopRateV',tR?pct(tR.rate):'');
+  set('kTopImp',tI?tI.pillar:'–'); set('kTopImpV',tI?fmt(tI.impressions)+' impressions':'');
+  set('kTopEpp',tP?tP.pillar:'–'); set('kTopEppV',tP?Math.round(tP.epp).toLocaleString()+' /โพสต์':'');
 
-  const fcSel=document.getElementById('fCompare').value, fpSel=platVal();
-  const cmpMap={};
-  if(fcSel){const fpi=pillarVal();
-    byPillar(DATA.summary.filter(r=>r.month===fcSel&&(!fpSel||r.platform===fpSel)&&(!fpi||fpi.includes(r.pillar)))).forEach(x=>cmpMap[x.pillar]=x);}
-  const hasCmp=!!fcSel;
-  const cv=(arr,key,mul)=>hasCmp?arr.map(p=>{const c=cmpMap[p.pillar];if(!c)return 0;return mul?+(c[key]*mul).toFixed(2):Math.round(c[key]);}):null;
-  const byEng=pil.slice().sort((a,b)=>b.engagement-a.engagement);
-  bar('cEng',byEng.map(p=>p.pillar),byEng.map(p=>p.engagement),'#27c4a6',fmt,false,cv(byEng,'engagement'));
-  const byImp=pil.slice().sort((a,b)=>b.impressions-a.impressions);
-  bar('cImp',byImp.map(p=>p.pillar),byImp.map(p=>p.impressions),'#5b8cff',fmt,true,cv(byImp,'impressions'));
-  const byRate=pil.slice().sort((a,b)=>b.rate-a.rate);
-  bar('cRate',byRate.map(p=>p.pillar),byRate.map(p=>+(p.rate*100).toFixed(2)),'#f5a524',v=>v+'%',false,cv(byRate,'rate',100));
-  const byEpp=pil.slice().sort((a,b)=>b.epp-a.epp);
-  bar('cEpp',byEpp.map(p=>p.pillar),byEpp.map(p=>Math.round(p.epp)),'#9b8cff',fmt,false,cv(byEpp,'epp'));
+  const cv=(arr,key,mul)=>B?arr.map(p=>{const c=cmpMap[p.pillar];if(!c)return 0;return mul?+(c[key]*mul).toFixed(2):Math.round(c[key]);}):null;
+  const byEng=pilA.slice().sort((a,b)=>b.engagement-a.engagement);
+  bar('cEng',byEng.map(p=>p.pillar),byEng.map(p=>p.engagement),'#27c4a6',fmt,false,cv(byEng,'engagement'),labA,labB);
+  const byImp=pilA.slice().sort((a,b)=>b.impressions-a.impressions);
+  bar('cImp',byImp.map(p=>p.pillar),byImp.map(p=>p.impressions),'#5b8cff',fmt,true,cv(byImp,'impressions'),labA,labB);
+  const byRate=pilA.slice().sort((a,b)=>b.rate-a.rate);
+  bar('cRate',byRate.map(p=>p.pillar),byRate.map(p=>+(p.rate*100).toFixed(2)),'#f5a524',x=>x+'%',false,cv(byRate,'rate',100),labA,labB);
+  const byEpp=pilA.slice().sort((a,b)=>b.epp-a.epp);
+  bar('cEpp',byEpp.map(p=>p.pillar),byEpp.map(p=>Math.round(p.epp)),'#9b8cff',fmt,false,cv(byEpp,'epp'),labA,labB);
 
-  const fp=platVal(), pm=monthVal();
-  const plats=[...new Set(DATA.summary.map(r=>r.platform))].filter(p=>!fp||p===fp);
+  // stacked: pillar x network
+  const fp=platVal();
   const pilNames=byEng.map(p=>p.pillar);
-  const engOf=(month,pl,pn)=>DATA.summary.filter(r=>(!month||r.month===month)&&r.platform===pl&&r.pillar===pn).reduce((s,r)=>s+r.reactions,0);
-  const ds=plats.map(pl=>({label:pl,stack:'p',backgroundColor:PLAT_COLORS[pl]||'#888',
-    data:pilNames.map(pn=>engOf(pm,pl,pn))}));
-  if(hasCmp){plats.forEach(pl=>ds.push({label:pl,stack:'c',backgroundColor:(PLAT_COLORS[pl]||'#888')+'66',
-    data:pilNames.map(pn=>engOf(fcSel,pl,pn))}));}
+  const nets=[...new Set((DATA.posts||[]).map(p=>p.network))].filter(n=>!fp||n===fp);
+  const ds=nets.map(n=>({label:n,stack:'p',backgroundColor:PLAT_COLORS[n]||'#888',data:pilNames.map(pn=>engPN(A,pn,n))}));
+  if(B)nets.forEach(n=>ds.push({label:n,stack:'c',backgroundColor:(PLAT_COLORS[n]||'#888')+'66',data:pilNames.map(pn=>engPN(B,pn,n))}));
   if(charts.cStack)charts.cStack.destroy();
   charts.cStack=new Chart(document.getElementById('cStack'),{type:'bar',
     data:{labels:pilNames,datasets:ds},
     options:{responsive:true,scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:fmt}}},
-      plugins:{legend:{position:'top',labels:{filter:(it)=>!hasCmp||(ds[it.datasetIndex]&&ds[it.datasetIndex].stack==='p')}},
-        datalabels:{color:c=>contrast(c.dataset.backgroundColor),anchor:'center',align:'center',font:{weight:'700',size:9},formatter:v=>v>=20000?fmt(v):''},
-        tooltip:{callbacks:{label:c=>`${c.dataset.label} (${c.dataset.stack==='c'?fcSel:(pm||'ช่วงหลัก')}): ${fmt(c.parsed.y)}`}}}}});
+      plugins:{legend:{position:'top',labels:{filter:(it)=>!B||(ds[it.datasetIndex]&&ds[it.datasetIndex].stack==='p')}},
+        datalabels:{color:c=>contrast(c.dataset.backgroundColor),anchor:'center',align:'center',font:{weight:'700',size:9},formatter:x=>x>=20000?fmt(x):''},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label} (${c.dataset.stack==='c'?labB:labA}): ${fmt(c.parsed.y)}`}}}}});
 
-  renderPillarTable(pil,cmpMap);
+  renderPillarTable(pilA,cmpMap);
 }
+
 function renderPillarTable(pil,cmp){
   cmp=cmp||{};
   const arr=pil.slice().sort((a,b)=> sortKey==='pillar'
     ? (a.pillar>b.pillar?sortDir:a.pillar<b.pillar?-sortDir:0) : (a[sortKey]-b[sortKey])*sortDir);
   const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
+  const has=Object.keys(cmp).length>0;
   arr.forEach(p=>{const c=cmp[p.pillar];const tr=document.createElement('tr');
     tr.innerHTML=`<td>${esc(p.pillar)}</td><td class="num">${p.posts.toLocaleString()}</td>
       <td class="num">${p.impressions.toLocaleString()}</td><td class="num">${p.engagement.toLocaleString()}</td>
       <td class="num">${pct(p.rate)}</td><td class="num">${Math.round(p.epp).toLocaleString()}</td>
-      <td class="num">${c?(deltaHTML(p.impressions,c.impressions)||'0%'):'—'}</td>
-      <td class="num">${c?(deltaHTML(p.engagement,c.engagement)||'0%'):'—'}</td>`;
+      <td class="num">${has?(deltaHTML(p.impressions,c?c.impressions:0)||'0%'):'—'}</td>
+      <td class="num">${has?(deltaHTML(p.engagement,c?c.engagement:0)||'0%'):'—'}</td>`;
     tb.appendChild(tr);});
 }
 
-function filteredPosts(){
-  const fp=platVal();
-  const fpi=document.getElementById('fPillar').value;
-  const from=document.getElementById('dFrom').value, to=document.getElementById('dTo').value;
-  const activeMonths=[document.getElementById('fMonth').value,document.getElementById('fCompare').value].filter(Boolean);
-  let arr=(DATA.posts||[]).filter(p=>
-    (!fp||p.network===fp)&&(!fpi||p.pillar===fpi)&&
-    (!from||(p.date||'')>=from)&&(!to||(p.date||'')<=to)&&
-    (activeMonths.length===0||activeMonths.includes(monthOf(p.date))));
-  const f=document.getElementById('sortField').value;
-  const dir=document.getElementById('sortDir').value==='asc'?1:-1;
+function topArr(){
+  const aFrom=v('aFrom'),aTo=v('aTo'),bFrom=v('bFrom'),bTo=v('bTo');
+  const hasCmp=!!(bFrom||bTo);
+  let arr=periodPosts(aFrom,aTo);
+  if(hasCmp)arr=arr.concat(periodPosts(bFrom,bTo));
+  const fpi=v('tPillar');
+  arr=arr.filter(p=>!fpi||p.pillar===fpi);
+  const f=v('sortField'), dir=v('sortDir')==='asc'?1:-1;
   arr.sort((a,b)=> f==='date' ? (a.date>b.date?dir:a.date<b.date?-dir:0) : (a[f]-b[f])*dir);
   return arr;
 }
 function renderPosts(){
-  const arr=filteredPosts();
+  const arr=topArr();
   const pages=Math.max(1,Math.ceil(arr.length/PER));
   if(PAGE>pages)PAGE=pages;
   const start=(PAGE-1)*PER, slice=arr.slice(start,start+PER);
@@ -277,12 +276,13 @@ function renderPosts(){
 }
 function renderAll(){renderCharts();renderPosts();}
 
-function fmtUpdated(s){const m=(s||'').match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);if(!m)return s||'-';
+function setSub(){const m=DATA.meta||{};
+  document.getElementById('sub').textContent=`ข้อมูล: ${m.source||''} · ${(DATA.posts||[]).length} โพสต์ · เทียบ 2 ช่วงด้วยวันที่`;
+  const el=document.getElementById('lastUpdate');if(el)el.textContent='🕒 อัปเดตล่าสุด: '+fmtU(m.generatedAt);}
+function fmtU(s){const m=(s||'').match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);if(!m)return s||'-';
   const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]));
   return d.toLocaleString('th-TH',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})+' น.';}
-function setSub(){const m=DATA.meta||{};
-  document.getElementById('sub').textContent=`ข้อมูล: ${m.source||''} · เดือน ${m.month||''} · ${(DATA.posts||[]).length} โพสต์`;
-  const el=document.getElementById('lastUpdate');if(el)el.textContent='🕒 อัปเดตล่าสุด: '+fmtUpdated(m.generatedAt);}
+
 function loadData(fresh){
   const btn=document.getElementById('refresh');
   if(btn){btn.disabled=true;btn.textContent='⏳ กำลังรีเฟรช...';}
@@ -292,18 +292,15 @@ function loadData(fresh){
    .finally(()=>{if(btn){btn.disabled=false;btn.textContent='🔄 รีเฟรชข้อมูล';}});
 }
 loadData(false).then(()=>{
-  document.getElementById('foot').textContent='วิเคราะห์จาก Raw Data by Pillar · ดึงสดจาก Google Sheet';
-  const months=[...new Set(DATA.summary.map(r=>r.month).filter(Boolean))];
-  const plats=[...new Set(DATA.summary.map(r=>r.platform))];
+  document.getElementById('foot').textContent='วิเคราะห์รายโพสต์ตามช่วงวันที่ · ดึงสดจาก Google Sheet';
+  const plats=[...new Set((DATA.posts||[]).map(p=>p.network).filter(Boolean))];
   const pils=[...new Set((DATA.posts||[]).map(p=>p.pillar).filter(Boolean))].sort();
-  months.forEach(p=>document.getElementById('fMonth').innerHTML+=`<option>${p}</option>`);
-  months.forEach(p=>document.getElementById('fCompare').innerHTML+=`<option>${p}</option>`);
   plats.forEach(p=>document.getElementById('fPlatform').innerHTML+=`<option>${p}</option>`);
-  pils.forEach(p=>document.getElementById('fPillar').innerHTML+=`<option>${p}</option>`);
+  pils.forEach(p=>document.getElementById('tPillar').innerHTML+=`<option>${p}</option>`);
   document.getElementById('refresh').onclick=()=>loadData(true);
-  ['sortField','sortDir'].forEach(id=>document.getElementById(id).onchange=()=>{PAGE=1;renderPosts();});
   document.getElementById('apply').onclick=()=>{PAGE=1;renderAll();};
-  document.getElementById('clear').onclick=()=>{['fMonth','fCompare','fPlatform','fPillar','dFrom','dTo'].forEach(id=>document.getElementById(id).value='');PAGE=1;renderAll();};
+  document.getElementById('clear').onclick=()=>{['aFrom','aTo','bFrom','bTo','fPlatform','tPillar'].forEach(id=>document.getElementById(id).value='');PAGE=1;renderAll();};
+  ['tPillar','sortField','sortDir'].forEach(id=>document.getElementById(id).onchange=()=>{PAGE=1;renderPosts();});
   document.getElementById('prev').onclick=()=>{if(PAGE>1){PAGE--;renderPosts();}};
   document.getElementById('next').onclick=()=>{PAGE++;renderPosts();};
   document.querySelectorAll('#tbl th.sortable').forEach(th=>th.onclick=()=>{
@@ -312,7 +309,7 @@ loadData(false).then(()=>{
     const s=th.dataset.s, sf=document.getElementById('sortField'), sd=document.getElementById('sortDir');
     if(sf.value===s)sd.value=sd.value==='desc'?'asc':'desc'; else{sf.value=s;sd.value='desc';} PAGE=1; renderPosts();});
   const dates=(DATA.posts||[]).map(p=>p.date).filter(Boolean).sort();
-  if(dates.length){document.getElementById('dFrom').min=dates[0];document.getElementById('dTo').max=dates[dates.length-1];}
+  if(dates.length){['aFrom','aTo','bFrom','bTo'].forEach(id=>{const e=document.getElementById(id);e.min=dates[0];e.max=dates[dates.length-1];});}
 });
 </script>
 </body>

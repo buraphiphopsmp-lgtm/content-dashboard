@@ -310,11 +310,12 @@ function renderScatter(){
     ctx.fillStyle='rgba(39,196,166,.12)';ctx.fillRect(px,ca.top,ca.right-px,py-ca.top);
     ctx.fillStyle='rgba(255,107,107,.10)';ctx.fillRect(ca.left,py,px-ca.left,ca.bottom-py);
     ctx.fillStyle='rgba(155,140,255,.13)';ctx.fillRect(px,py,ca.right-px,ca.bottom-py);
-    ctx.textAlign='center';ctx.font='600 12px sans-serif';
-    ctx.fillStyle='rgba(120,160,255,.95)';ctx.fillText('High Impact · Low Volume',(ca.left+px)/2,ca.top+18);
-    ctx.fillStyle='rgba(39,196,166,.95)';ctx.fillText('High Engagement · High Volume',(px+ca.right)/2,ca.top+18);
-    ctx.fillStyle='rgba(255,107,107,.95)';ctx.fillText('Low Impact · Low Volume',(ca.left+px)/2,py+18);
-    ctx.fillStyle='rgba(170,150,255,.98)';ctx.fillText('Low Impact · High Volume',(px+ca.right)/2,py+18);
+    ctx.font='700 11px sans-serif';ctx.textBaseline='middle';
+    ctx.textAlign='left';ctx.fillStyle='rgba(120,160,255,.85)';ctx.fillText('High Impact · Low Volume',ca.left+10,ca.top+12);
+    ctx.textAlign='right';ctx.fillStyle='rgba(39,196,166,.85)';ctx.fillText('High Engagement · High Volume',ca.right-10,ca.top+12);
+    ctx.textAlign='left';ctx.fillStyle='rgba(255,107,107,.85)';ctx.fillText('Low Impact · Low Volume',ca.left+10,ca.bottom-12);
+    ctx.textAlign='right';ctx.fillStyle='rgba(170,150,255,.9)';ctx.fillText('Low Impact · High Volume',ca.right-10,ca.bottom-12);
+    ctx.textAlign='left';ctx.textBaseline='alphabetic';
     ctx.setLineDash([5,4]);ctx.strokeStyle='rgba(255,255,255,.32)';ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(px,ca.top);ctx.lineTo(px,ca.bottom);ctx.stroke();
     ctx.beginPath();ctx.moveTo(ca.left,py);ctx.lineTo(ca.right,py);ctx.stroke();

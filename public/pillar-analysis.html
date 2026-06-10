@@ -100,7 +100,7 @@
         <select id="scGroup"><option value="pillar">Pillar</option><option value="network">แพลตฟอร์ม</option></select></div>
     </div>
     <canvas id="cScatter" style="max-height:560px"></canvas>
-    <div style="color:var(--muted);font-size:12px;margin-top:10px">แต่ละจุด = 1 กลุ่ม · แกน X = Impressions เฉลี่ย/โพสต์ (Reach) · แกน Y = Engagement เฉลี่ย/โพสต์ (Impact) · <b>ขนาดจุด = จำนวนโพสต์</b> · เส้นประ = ค่าเฉลี่ย แบ่ง 4 โซน · อิงช่วง A + แพลตฟอร์มที่เลือก</div>
+    <div style="color:var(--muted);font-size:12px;margin-top:10px">แต่ละจุด = 1 กลุ่ม · แกน X = Impressions เฉลี่ย/โพสต์ (Reach) · แกน Y = Engagement เฉลี่ย/โพสต์ (Impact) · <b>ขนาดจุด = จำนวนโพสต์</b> · เส้นประ = ค่าเฉลี่ย แบ่ง 4 โซน · <b>ใส่ช่วง B เพื่อเทียบ</b>: จุดโปร่ง = A → จุดทึบ = B (ลูกศร = ทิศทางการเปลี่ยน)</div>
   </div>
 
   <div class="card">
@@ -292,18 +292,24 @@ const PALETTE=['#5b8cff','#27c4a6','#E4405F','#f5a524','#9b8cff','#25F4EE','#ff7
 let scatterChart;
 function pillarColorMap(){const ps=[...new Set((DATA.posts||[]).map(p=>p.pillar).filter(Boolean))].sort();const m={};ps.forEach((p,i)=>m[p]=PALETTE[i%PALETTE.length]);return m;}
 function renderScatter(){
-  const A=periodPosts(v('aFrom'),v('aTo')).filter(p=>p.impressions>0);
   const dim=v('scGroup')||'pillar';
-  const g={};
-  A.forEach(p=>{const k=p[dim]||'(ไม่ระบุ)';if(!g[k])g[k]={k,imp:0,eng:0,n:0};g[k].imp+=p.impressions;g[k].eng+=p.engagement;g[k].n++;});
-  const arr=Object.values(g).map(o=>({k:o.k,x:o.imp/o.n,y:o.eng/o.n,tot:o.eng,n:o.n}));
+  const bFrom=v('bFrom'),bTo=v('bTo'),hasCmp=!!(bFrom||bTo);
+  const agg=(posts)=>{const g={};posts.forEach(p=>{const k=p[dim]||'(ไม่ระบุ)';if(!g[k])g[k]={k,imp:0,eng:0,n:0};g[k].imp+=p.impressions;g[k].eng+=p.engagement;g[k].n++;});return g;};
+  const A=agg(periodPosts(v('aFrom'),v('aTo')).filter(p=>p.impressions>0));
+  const B=hasCmp?agg(periodPosts(bFrom,bTo).filter(p=>p.impressions>0)):null;
   const cmap=dim==='network'?PLAT_COLORS:pillarColorMap();
-  const maxN=Math.max(1,...arr.map(o=>o.n));
-  const maxX=Math.max(1,...arr.map(o=>o.x)), maxY=Math.max(1,...arr.map(o=>o.y));
-  const datasets=arr.map(o=>({label:o.k,backgroundColor:(cmap[o.k]||'#888')+'cc',borderColor:cmap[o.k]||'#888',
-    data:[{x:o.x,y:o.y,r:8+Math.sqrt(o.n/maxN)*26,n:o.n,tot:o.tot}]}));
-  const m=arr.length||1;
-  const avgX=arr.reduce((s,o)=>s+o.x,0)/m, avgY=arr.reduce((s,o)=>s+o.y,0)/m;
+  const keys=[...new Set([...Object.keys(A),...(B?Object.keys(B):[])])];
+  const pt=o=>(o&&o.n)?{x:o.imp/o.n,y:o.eng/o.n,n:o.n}:null;
+  const allN=Object.values(A).map(o=>o.n).concat(B?Object.values(B).map(o=>o.n):[]);
+  const maxN=Math.max(1,...allN), rOf=n=>8+Math.sqrt(n/maxN)*24;
+  const datasets=keys.map(k=>{const a=pt(A[k]),b=B?pt(B[k]):null,col=cmap[k]||'#888',data=[],bg=[];
+    if(a){data.push({x:a.x,y:a.y,r:rOf(a.n),n:a.n,per:'A'});bg.push(hasCmp?col+'40':col+'cc');}
+    if(hasCmp&&b){data.push({x:b.x,y:b.y,r:rOf(b.n),n:b.n,per:'B'});bg.push(col+'cc');}
+    return {label:k,backgroundColor:bg,borderColor:col,borderWidth:1,data,_col:col};
+  }).filter(d=>d.data.length);
+  const pts=datasets.flatMap(d=>d.data);
+  const maxX=Math.max(1,...pts.map(p=>p.x)), maxY=Math.max(1,...pts.map(p=>p.y));
+  const avgX=pts.reduce((s,p)=>s+p.x,0)/(pts.length||1), avgY=pts.reduce((s,p)=>s+p.y,0)/(pts.length||1);
   const quad={id:'quad',beforeDatasetsDraw:(ch)=>{const ca=ch.chartArea;if(!ca)return;const ctx=ch.ctx,px=ch.scales.x.getPixelForValue(avgX),py=ch.scales.y.getPixelForValue(avgY);
     ctx.save();
     ctx.fillStyle='rgba(91,140,255,.10)';ctx.fillRect(ca.left,ca.top,px-ca.left,py-ca.top);
@@ -320,13 +326,20 @@ function renderScatter(){
     ctx.beginPath();ctx.moveTo(px,ca.top);ctx.lineTo(px,ca.bottom);ctx.stroke();
     ctx.beginPath();ctx.moveTo(ca.left,py);ctx.lineTo(ca.right,py);ctx.stroke();
     ctx.restore();}};
+  const arrows={id:'arrows',afterDatasetsDraw:(ch)=>{if(!hasCmp)return;const ctx=ch.ctx;ctx.save();
+    ch.data.datasets.forEach((ds,i)=>{const md=ch.getDatasetMeta(i).data;if(!md||md.length<2)return;const p0=md[0],p1=md[1];
+      ctx.strokeStyle=ds._col||'#888';ctx.globalAlpha=.6;ctx.lineWidth=1.5;ctx.setLineDash([]);
+      ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);ctx.stroke();
+      const ang=Math.atan2(p1.y-p0.y,p1.x-p0.x),h=8;
+      ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p1.x-h*Math.cos(ang-0.45),p1.y-h*Math.sin(ang-0.45));ctx.lineTo(p1.x-h*Math.cos(ang+0.45),p1.y-h*Math.sin(ang+0.45));ctx.closePath();ctx.fillStyle=ds._col||'#888';ctx.fill();
+    });ctx.globalAlpha=1;ctx.restore();}};
   if(scatterChart)scatterChart.destroy();
   scatterChart=new Chart(document.getElementById('cScatter'),{type:'bubble',data:{datasets},
     options:{responsive:true,layout:{padding:{top:8}},
-      scales:{x:{min:-maxX*0.05,suggestedMax:maxX*1.1,title:{display:true,text:'Impressions เฉลี่ย/โพสต์ (Reach)',color:'#9aa3b2'},ticks:{callback:v=>v<0?'':fmt(v)}},y:{min:-maxY*0.08,suggestedMax:maxY*1.14,title:{display:true,text:'Engagement เฉลี่ย/โพสต์ (Impact)',color:'#9aa3b2'},ticks:{callback:v=>v<0?'':fmt(v)}}},
-      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8}},datalabels:{display:false},
-        tooltip:{callbacks:{title:c=>c[0].dataset.label,label:c=>'โพสต์ '+c.raw.n+' · Imp เฉลี่ย '+fmt(Math.round(c.raw.x))+' · Eng เฉลี่ย '+fmt(Math.round(c.raw.y))+' · Eng รวม '+fmt(c.raw.tot)}}}},
-    plugins:[quad]});
+      scales:{x:{min:-maxX*0.05,suggestedMax:maxX*1.1,title:{display:true,text:'Impressions เฉลี่ย/โพสต์ (Reach)',color:'#9aa3b2'},ticks:{callback:val=>val<0?'':fmt(val)}},y:{min:-maxY*0.08,suggestedMax:maxY*1.14,title:{display:true,text:'Engagement เฉลี่ย/โพสต์ (Impact)',color:'#9aa3b2'},ticks:{callback:val=>val<0?'':fmt(val)}}},
+      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,generateLabels:(ch)=>ch.data.datasets.map((ds,i)=>({text:ds.label,fillStyle:ds._col,strokeStyle:ds._col,pointStyle:'circle',hidden:!ch.isDatasetVisible(i),datasetIndex:i}))}},datalabels:{display:false},
+        tooltip:{callbacks:{title:c=>c[0].dataset.label+(hasCmp?' · ช่วง '+c[0].raw.per:''),label:c=>'โพสต์ '+c.raw.n+' · Imp เฉลี่ย '+fmt(Math.round(c.raw.x))+' · Eng เฉลี่ย '+fmt(Math.round(c.raw.y))}}}},
+    plugins:[quad,arrows]});
 }
 function renderAll(){renderCharts();renderScatter();renderPosts();}
 

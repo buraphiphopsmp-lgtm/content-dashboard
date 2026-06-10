@@ -180,10 +180,10 @@ function bar(id,labels,data,color,fmtFn,horizontal,compareData){
   charts[id]=new Chart(document.getElementById(id),{type:'bar',
     data:{labels,datasets},
     options:{responsive:true,indexAxis:horizontal?'y':'x',
-      layout:{padding:horizontal?{right:54}:{top:24}},
+      layout:{padding:horizontal?{right:54}:{top:hasC?46:24}},
       scales:horizontal?{x:{ticks:{callback:fmtFn}}}:{y:{ticks:{callback:fmtFn}}},
       plugins:{legend:{display:hasC,labels:{boxWidth:12}},
-        datalabels:{color:'#cdd6e6',anchor:'end',align:horizontal?'right':'top',font:{weight:'600',size:hasC?9:11},formatter:v=>v>0?fmtFn(v):''}}}});
+        datalabels:{color:'#cdd6e6',anchor:'end',align:horizontal?'right':'top',rotation:(!horizontal&&hasC)?-90:0,font:{weight:'600',size:hasC?9:11},formatter:v=>v>0?fmtFn(v):''}}}});
 }
 function renderCharts(){
   const rows=scopedRows();

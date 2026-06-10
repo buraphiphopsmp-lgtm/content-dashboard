@@ -208,17 +208,21 @@ function renderCharts(){
   const byEpp=pil.slice().sort((a,b)=>b.epp-a.epp);
   bar('cEpp',byEpp.map(p=>p.pillar),byEpp.map(p=>Math.round(p.epp)),'#9b8cff',fmt,false,cv(byEpp,'epp'));
 
-  const fp=platVal();
+  const fp=platVal(), pm=monthVal();
   const plats=[...new Set(DATA.summary.map(r=>r.platform))].filter(p=>!fp||p===fp);
   const pilNames=byEng.map(p=>p.pillar);
-  const ds=plats.map(pl=>({label:pl,backgroundColor:PLAT_COLORS[pl]||'#888',
-    data:pilNames.map(pn=>{const row=DATA.summary.find(r=>r.platform===pl&&r.pillar===pn);return row?row.reactions:0;})}));
+  const engOf=(month,pl,pn)=>DATA.summary.filter(r=>(!month||r.month===month)&&r.platform===pl&&r.pillar===pn).reduce((s,r)=>s+r.reactions,0);
+  const ds=plats.map(pl=>({label:pl,stack:'p',backgroundColor:PLAT_COLORS[pl]||'#888',
+    data:pilNames.map(pn=>engOf(pm,pl,pn))}));
+  if(hasCmp){plats.forEach(pl=>ds.push({label:pl,stack:'c',backgroundColor:(PLAT_COLORS[pl]||'#888')+'66',
+    data:pilNames.map(pn=>engOf(fcSel,pl,pn))}));}
   if(charts.cStack)charts.cStack.destroy();
   charts.cStack=new Chart(document.getElementById('cStack'),{type:'bar',
     data:{labels:pilNames,datasets:ds},
     options:{responsive:true,scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:fmt}}},
-      plugins:{legend:{position:'top'},datalabels:{display:false},
-        tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)}}}}});
+      plugins:{legend:{position:'top',labels:{filter:(it)=>!hasCmp||(ds[it.datasetIndex]&&ds[it.datasetIndex].stack==='p')}},
+        datalabels:{display:false},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label} (${c.dataset.stack==='c'?fcSel:(pm||'ช่วงหลัก')}): ${fmt(c.parsed.y)}`}}}}});
 
   renderPillarTable(pil,cmpMap);
 }

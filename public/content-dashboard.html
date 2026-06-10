@@ -136,9 +136,14 @@ function render(){
      options:{indexAxis:'y',layout:{padding:{right:54}},scales:{x:{ticks:{callback:fmt}}},
        plugins:{legend:{display:grouped,labels:{boxWidth:12}},datalabels:grouped?{display:false}:dl('#cdd6e6','right')}}});
 
-  makeChart('cPostsPlat','doughnut',platLabels,platLabels.map(p=>byPlat[p].posts),
-    {legend:true,ds:{backgroundColor:platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff')},
-     options:{plugins:{legend:{position:'right'},datalabels:{color:c=>contrast(c.dataset.backgroundColor[c.dataIndex]),font:{weight:'700',size:12},formatter:v=>v>0?v:''}}}});
+  const postCols=platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff');
+  makeChart('cPostsPlat','doughnut',platLabels,null,
+    {legend:true,
+     datasets:[{data:platLabels.map(p=>byPlat[p].posts),backgroundColor:postCols,label:labP}]
+       .concat(cmp?[{data:platLabels.map(p=>cByPlat[p]?cByPlat[p].posts:0),backgroundColor:postCols.map(c=>c+'66'),label:labC,weight:0.5}]:[]),
+     options:{plugins:{legend:{position:'right'},
+       datalabels:{color:c=>contrast((c.dataset.backgroundColor[c.dataIndex]||'#888888').slice(0,7)),font:{weight:'700',size:11},formatter:(v,c)=>c.datasetIndex===0&&v>0?v:''},
+       tooltip:{callbacks:{label:c=>`${c.label} (${c.datasetIndex===0?labP:labC}): ${c.parsed}`}}}}});
 
   const byPil=groupSum(rows,'pillar');
   const cByPil=cmp?groupSum(cmp,'pillar'):null;

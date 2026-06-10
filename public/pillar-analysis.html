@@ -21,6 +21,7 @@
   .btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
   .btn:hover{filter:brightness(1.1)} .btn:disabled{opacity:.6;cursor:default}
   .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)} .btn.ghost:hover{color:var(--txt);filter:none}
+  .dlt{font-size:12px;font-weight:700;white-space:nowrap}.dlt.up{color:#2ecc71}.dlt.down{color:#ff6b6b}
   .upd{display:inline-flex;align-items:center;gap:4px;background:rgba(39,196,166,.12);color:var(--accent2);border:1px solid rgba(39,196,166,.35);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:600;white-space:nowrap}
   .nav{display:flex;gap:8px}
   .nav a{padding:8px 16px;border-radius:10px;border:1px solid var(--line);color:var(--muted);background:var(--card);font-weight:600;font-size:13px;text-decoration:none}
@@ -66,6 +67,8 @@
   <div class="subbar">
     <div class="sub" id="sub">กำลังโหลดข้อมูล…</div>
     <div class="filters">
+      <span><label class="fl">เดือน</label><select id="fMonth"><option value="">ทั้งหมด</option></select></span>
+      <span><label class="fl">เทียบกับ</label><select id="fCompare"><option value="">—</option></select></span>
       <span><label class="fl">แพลตฟอร์ม</label><select id="fPlatform"><option value="">ทุกแพลตฟอร์ม</option></select></span>
       <span><label class="fl">Pillar</label><select id="fPillar"><option value="">ทั้งหมด</option></select></span>
       <span><label class="fl">วันที่</label><input type="date" id="dFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="dTo"></span>
@@ -102,6 +105,8 @@
         <th class="num sortable" data-s="engagement">Engagement ⇅</th>
         <th class="num sortable" data-s="rate">Eng Rate ⇅</th>
         <th class="num sortable" data-s="epp">Eng/Post ⇅</th>
+        <th class="num">Δ Imp</th>
+        <th class="num">Δ Eng</th>
       </tr></thead>
       <tbody></tbody>
     </table>
@@ -146,6 +151,7 @@
 const PLAT_COLORS={Facebook:'#1877F2',Instagram:'#E4405F',TikTok:'#25F4EE',X:'#E7E9EA',YouTube:'#FF0000'};
 const fmt=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':Math.round(n).toLocaleString();
 const pct=n=>(n*100).toFixed(2)+'%';
+function deltaHTML(cur,prev){if(prev===undefined||prev===null)return '';if(prev===0)return cur>0?'<span class="dlt up">▲ ใหม่</span>':'';const d=(cur-prev)/prev*100,up=d>=0;return `<span class="dlt ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(d).toFixed(1)}%</span>`;}
 const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 let DATA, charts={}, sortKey='engagement', sortDir=-1, PAGE=1, PER=20;
 
@@ -155,7 +161,8 @@ Chart.defaults.font.family="'Segoe UI',Tahoma,'Sarabun',sans-serif";
 
 const platVal=()=>document.getElementById('fPlatform').value;
 const pillarVal=()=>document.getElementById('fPillar').value;
-function scopedRows(){const fp=platVal(),fpi=pillarVal();return DATA.summary.filter(r=>(!fp||r.platform===fp)&&(!fpi||fpi.includes(r.pillar)));}
+const monthVal=()=>document.getElementById('fMonth').value;
+function scopedRows(){const fm=monthVal(),fp=platVal(),fpi=pillarVal();return DATA.summary.filter(r=>(!fm||r.month===fm)&&(!fp||r.platform===fp)&&(!fpi||fpi.includes(r.pillar)));}
 function byPillar(rows){
   const m={};
   for(const r of rows){if(!m[r.pillar])m[r.pillar]={pillar:r.pillar,impressions:0,engagement:0,posts:0};
@@ -204,16 +211,24 @@ function renderCharts(){
       plugins:{legend:{position:'top'},datalabels:{display:false},
         tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)}}}}});
 
-  renderPillarTable(pil);
+  const fc=document.getElementById('fCompare').value;
+  let cmpMap={};
+  if(fc){const fpi=pillarVal();
+    const crows=DATA.summary.filter(r=>r.month===fc&&(!fp||r.platform===fp)&&(!fpi||fpi.includes(r.pillar)));
+    byPillar(crows).forEach(x=>cmpMap[x.pillar]=x);}
+  renderPillarTable(pil,cmpMap);
 }
-function renderPillarTable(pil){
+function renderPillarTable(pil,cmp){
+  cmp=cmp||{};
   const arr=pil.slice().sort((a,b)=> sortKey==='pillar'
     ? (a.pillar>b.pillar?sortDir:a.pillar<b.pillar?-sortDir:0) : (a[sortKey]-b[sortKey])*sortDir);
   const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
-  arr.forEach(p=>{const tr=document.createElement('tr');
+  arr.forEach(p=>{const c=cmp[p.pillar];const tr=document.createElement('tr');
     tr.innerHTML=`<td>${esc(p.pillar)}</td><td class="num">${p.posts.toLocaleString()}</td>
       <td class="num">${p.impressions.toLocaleString()}</td><td class="num">${p.engagement.toLocaleString()}</td>
-      <td class="num">${pct(p.rate)}</td><td class="num">${Math.round(p.epp).toLocaleString()}</td>`;
+      <td class="num">${pct(p.rate)}</td><td class="num">${Math.round(p.epp).toLocaleString()}</td>
+      <td class="num">${c?(deltaHTML(p.impressions,c.impressions)||'0%'):'—'}</td>
+      <td class="num">${c?(deltaHTML(p.engagement,c.engagement)||'0%'):'—'}</td>`;
     tb.appendChild(tr);});
 }
 
@@ -265,14 +280,17 @@ function loadData(fresh){
 }
 loadData(false).then(()=>{
   document.getElementById('foot').textContent='วิเคราะห์จาก Raw Data by Pillar · ดึงสดจาก Google Sheet';
+  const months=[...new Set(DATA.summary.map(r=>r.month).filter(Boolean))];
   const plats=[...new Set(DATA.summary.map(r=>r.platform))];
   const pils=[...new Set((DATA.posts||[]).map(p=>p.pillar).filter(Boolean))].sort();
+  months.forEach(p=>document.getElementById('fMonth').innerHTML+=`<option>${p}</option>`);
+  months.forEach(p=>document.getElementById('fCompare').innerHTML+=`<option>${p}</option>`);
   plats.forEach(p=>document.getElementById('fPlatform').innerHTML+=`<option>${p}</option>`);
   pils.forEach(p=>document.getElementById('fPillar').innerHTML+=`<option>${p}</option>`);
   document.getElementById('refresh').onclick=()=>loadData(true);
   ['sortField','sortDir'].forEach(id=>document.getElementById(id).onchange=()=>{PAGE=1;renderPosts();});
   document.getElementById('apply').onclick=()=>{PAGE=1;renderAll();};
-  document.getElementById('clear').onclick=()=>{['fPlatform','fPillar','dFrom','dTo'].forEach(id=>document.getElementById(id).value='');PAGE=1;renderAll();};
+  document.getElementById('clear').onclick=()=>{['fMonth','fCompare','fPlatform','fPillar','dFrom','dTo'].forEach(id=>document.getElementById(id).value='');PAGE=1;renderAll();};
   document.getElementById('prev').onclick=()=>{if(PAGE>1){PAGE--;renderPosts();}};
   document.getElementById('next').onclick=()=>{PAGE++;renderPosts();};
   document.querySelectorAll('#tbl th.sortable').forEach(th=>th.onclick=()=>{

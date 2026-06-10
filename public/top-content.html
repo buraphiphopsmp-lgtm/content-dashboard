@@ -23,6 +23,9 @@
   .btn:hover{filter:brightness(1.1)} .btn:disabled{opacity:.6;cursor:default}
   .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)} .btn.ghost:hover{color:var(--txt);filter:none}
   .upd{display:inline-flex;align-items:center;gap:4px;background:rgba(39,196,166,.12);color:var(--accent2);border:1px solid rgba(39,196,166,.35);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:600;white-space:nowrap}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+  .chip{display:inline-flex;align-items:center;gap:5px;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:12px;cursor:pointer;color:var(--txt)}
+  .chip input{accent-color:var(--accent);margin:0}
   h2.sec{font-size:17px;margin:24px 0 12px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
   .card h3{margin:0 0 10px;font-size:14px;font-weight:600}
@@ -61,6 +64,9 @@
     </div>
   </div>
 
+  <div class="chips" id="platChips"></div>
+  <div class="chips" id="pillChips" style="margin-bottom:16px"></div>
+
   <h2 class="sec">🏆 Top Content แต่ละแพลตฟอร์ม</h2>
   <div id="byPlatform"></div>
 
@@ -79,7 +85,9 @@ const sum=(a,k)=>a.reduce((s,p)=>s+(p[k]||0),0);
 let DATA;
 
 function pillarColorMap(){const ps=[...new Set((DATA.posts||[]).map(p=>p.pillar).filter(Boolean))].sort();const m={};ps.forEach((p,i)=>m[p]=PALETTE[i%PALETTE.length]);return m;}
-function filtered(){const f=v('dFrom'),t=v('dTo');return (DATA.posts||[]).filter(p=>(!f||(p.date||'')>=f)&&(!t||(p.date||'')<=t));}
+function getSel(id){return [...document.querySelectorAll('#'+id+' input:checked')].map(i=>i.value);}
+function buildChips(id,items,label){const c=document.getElementById(id);c.innerHTML='<span class="fl" style="margin-right:2px">'+label+'</span>'+items.map(it=>`<label class="chip"><input type="checkbox" value="${esc(it)}">${esc(it)}</label>`).join('');c.querySelectorAll('input').forEach(i=>i.onchange=renderAll);}
+function filtered(){const f=v('dFrom'),t=v('dTo'),sp=getSel('platChips'),sl=getSel('pillChips');return (DATA.posts||[]).filter(p=>(!f||(p.date||'')>=f)&&(!t||(p.date||'')<=t)&&(!sp.length||sp.includes(p.network))&&(!sl.length||sl.includes(p.pillar)));}
 
 function renderGroups(dim, containerId, otherLabel, colorFn){
   const posts=filtered();
@@ -126,9 +134,11 @@ function loadData(fresh){
    .finally(()=>{if(btn){btn.disabled=false;btn.textContent='🔄 รีเฟรชข้อมูล';}});
 }
 loadData(false).then(()=>{
-  document.getElementById('foot').textContent='จัดอันดับรายโพสต์จาก Google Sheet · เลือกช่วงวันที่/เมตริก/จำนวนได้';
+  document.getElementById('foot').textContent='จัดอันดับรายโพสต์จาก Google Sheet · เลือกช่วงวันที่/แพลตฟอร์ม/Pillar/เมตริก/จำนวนได้';
+  buildChips('platChips',[...new Set((DATA.posts||[]).map(p=>p.network).filter(Boolean))],'แพลตฟอร์ม:');
+  buildChips('pillChips',[...new Set((DATA.posts||[]).map(p=>p.pillar).filter(Boolean))].sort(),'Pillar:');
   document.getElementById('apply').onclick=renderAll;
-  document.getElementById('clear').onclick=()=>{['dFrom','dTo'].forEach(id=>document.getElementById(id).value='');document.getElementById('metric').value='engagement';document.getElementById('topN').value='5';renderAll();};
+  document.getElementById('clear').onclick=()=>{['dFrom','dTo'].forEach(id=>document.getElementById(id).value='');document.getElementById('metric').value='engagement';document.getElementById('topN').value='5';document.querySelectorAll('.chips input').forEach(i=>i.checked=false);renderAll();};
   document.getElementById('refresh').onclick=()=>loadData(true);
   ['metric','topN'].forEach(id=>document.getElementById(id).onchange=renderAll);
 });

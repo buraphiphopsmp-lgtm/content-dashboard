@@ -123,8 +123,8 @@ function render(){
   document.getElementById('kPosts').innerHTML=tPosts.toLocaleString()+(cmp?deltaHTML(tPosts,cPosts):'');
   document.getElementById('kRate').innerHTML=(tImp?pct(tEng/tImp):'–')+(cmp?deltaHTML(tImp?tEng/tImp:0,cImp?cEng/cImp:0):'');
 
-  const dl=(color,align)=>({color:color||'#cdd6e6',anchor:'end',align:align||'end',font:{weight:'600',size:11},formatter:v=>v>0?fmt(v):''});
   const CMPCLR='#5a6473', labP=fm||'ช่วงหลัก', labC=fc, grouped=!!cmp;
+  const dl=(color,align)=>({color:color||'#cdd6e6',anchor:'end',align:align||'end',font:{weight:'600',size:grouped?9:11},formatter:v=>v>0?fmt(v):''});
 
   const byPlat=groupSum(rows,'platform');
   const cByPlat=cmp?groupSum(cmp,'platform'):null;
@@ -134,7 +134,7 @@ function render(){
      datasets:[{data:platLabels.map(p=>byPlat[p].impressions),backgroundColor:platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff'),borderRadius:6,label:labP}]
        .concat(cmp?[{data:platLabels.map(p=>cByPlat[p]?cByPlat[p].impressions:0),backgroundColor:CMPCLR,borderRadius:6,label:labC}]:[]),
      options:{indexAxis:'y',layout:{padding:{right:54}},scales:{x:{ticks:{callback:fmt}}},
-       plugins:{legend:{display:grouped,labels:{boxWidth:12}},datalabels:grouped?{display:false}:dl('#cdd6e6','right')}}});
+       plugins:{legend:{display:grouped,labels:{boxWidth:12}},datalabels:dl('#cdd6e6','right')}}});
 
   const postCols=platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff');
   makeChart('cPostsPlat','doughnut',platLabels,null,
@@ -153,7 +153,7 @@ function render(){
      datasets:[{data:pilLabels.map(p=>byPil[p].reactions),backgroundColor:'#27c4a6',borderRadius:6,label:labP}]
        .concat(cmp?[{data:pilLabels.map(p=>cByPil[p]?cByPil[p].reactions:0),backgroundColor:CMPCLR,borderRadius:6,label:labC}]:[]),
      options:{layout:{padding:{top:24}},scales:{y:{ticks:{callback:fmt}}},
-       plugins:{legend:{display:grouped,labels:{boxWidth:12}},datalabels:grouped?{display:false}:dl('#cdd6e6','top')}}});
+       plugins:{legend:{display:grouped,labels:{boxWidth:12}},datalabels:dl('#cdd6e6','top')}}});
 
   const rateLabels=pilLabels.slice().sort((a,b)=>(byPil[b].reactions/(byPil[b].impressions||1))-(byPil[a].reactions/(byPil[a].impressions||1)));
   const rp=p=>byPil[p]&&byPil[p].impressions?byPil[p].reactions/byPil[p].impressions*100:0;
@@ -164,7 +164,7 @@ function render(){
        .concat(cmp?[{data:rateLabels.map(rc),backgroundColor:CMPCLR,borderRadius:6,label:labC}]:[]),
      options:{layout:{padding:{top:24}},scales:{y:{ticks:{callback:v=>v+'%'}}},
        plugins:{legend:{display:grouped,labels:{boxWidth:12}},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)+'%'}},
-         datalabels:grouped?{display:false}:{color:'#cdd6e6',anchor:'end',align:'top',font:{weight:'600',size:11},formatter:v=>v>0?v.toFixed(1)+'%':''}}}});
+         datalabels:{color:'#cdd6e6',anchor:'end',align:'top',font:{weight:'600',size:grouped?9:11},formatter:v=>v>0?v.toFixed(1)+'%':''}}}});
 }
 function fmtUpdated(s){const m=(s||'').match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);if(!m)return s||'-';
   const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]));

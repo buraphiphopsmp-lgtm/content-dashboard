@@ -9,7 +9,7 @@ const PUBLIC = path.join(__dirname, 'public');
 const SHEET_ID = '1PORT556ite9ATGh91lYc3KdGAMz6h4fVoL_0vM6u0g4';
 const GID_SUMMARY = '307838850';   // แท็บสรุปรายเดือน (Month, Platform, Profile/Pillar ...)
 const GID_POSTS   = '277724235';   // แท็บรายโพสต์ (Pillar, Date, Message, Network ...)
-const CACHE_MS = 10 * 60 * 1000;   // cache 10 นาที
+const CACHE_MS = 2 * 60 * 1000;    // cache 2 นาที
 const csvUrl = (gid) => `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
 
 let CACHE = { ts: 0, data: null };
@@ -61,11 +61,11 @@ function header(rows) {
 }
 function buildSummary(rows) {
   const h = header(rows);
-  const c = { platform: h.exact('Platform'), pillar: h.exact('Profile'),
+  const c = { month: h.exact('Month'), platform: h.exact('Platform'), pillar: h.exact('Profile'),
     reactions: h.incl('Reactions'), impressions: h.exact('Impressions/views of posts'),
     posts: h.incl('Number of posts') };
   return h.body.map(r => ({
-    platform: clean(r[c.platform]), pillar: clean(r[c.pillar]),
+    month: clean(r[c.month]), platform: clean(r[c.platform]), pillar: clean(r[c.pillar]),
     reactions: Math.round(num(r[c.reactions])), impressions: Math.round(num(r[c.impressions])),
     posts: Math.round(num(r[c.posts])),
   })).filter(x => x.platform);
@@ -89,8 +89,8 @@ function buildPosts(rows) {
   }).filter(x => x.network);
 }
 
-async function getData() {
-  if (CACHE.data && Date.now() - CACHE.ts < CACHE_MS) return CACHE.data;
+async function getData(force) {
+  if (!force && CACHE.data && Date.now() - CACHE.ts < CACHE_MS) return CACHE.data;
   const [sumRows, postRows] = await Promise.all([fetchCsv(GID_SUMMARY), fetchCsv(GID_POSTS)]);
   const summary = buildSummary(sumRows);
   const posts = buildPosts(postRows);
@@ -107,7 +107,7 @@ async function getData() {
 app.get('/content-data.json', async (req, res) => {
   res.set('Cache-Control', 'no-cache');
   try {
-    res.json(await getData());
+    res.json(await getData(req.query.fresh === '1'));
   } catch (e) {
     if (CACHE.data) return res.json(CACHE.data);            // serve stale on error
     res.status(502).json({ error: String(e.message || e), meta: {}, summary: [], posts: [] });

@@ -50,6 +50,7 @@
   <div class="subbar">
     <div class="sub" id="sub">กำลังโหลดข้อมูล…</div>
     <div class="filters">
+      <span><label class="fl">เดือน</label><select id="fMonth"><option value="">ทั้งหมด</option></select></span>
       <span><label class="fl">แพลตฟอร์ม</label><select id="fPlatform"><option value="">ทั้งหมด</option></select></span>
       <span><label class="fl">Pillar</label><select id="fPillar"><option value="">ทั้งหมด</option></select></span>
       <button id="apply" class="btn">ใช้ตัวกรอง</button>
@@ -101,9 +102,10 @@ function makeChart(id,type,labels,data,opts){
     options:Object.assign({responsive:true,plugins:{legend:{display:opts.legend||false}}},opts.options||{})});
 }
 function render(){
+  const fm=document.getElementById('fMonth').value;
   const fp=document.getElementById('fPlatform').value;
   const fpi=document.getElementById('fPillar').value;
-  const rows=DATA.summary.filter(r=>(!fp||r.platform===fp)&&(!fpi||r.pillar===fpi));
+  const rows=DATA.summary.filter(r=>(!fm||r.month===fm)&&(!fp||r.platform===fp)&&(!fpi||r.pillar===fpi));
   const tImp=rows.reduce((s,r)=>s+r.impressions,0);
   const tEng=rows.reduce((s,r)=>s+r.reactions,0);
   const tPosts=rows.reduce((s,r)=>s+r.posts,0);
@@ -155,12 +157,14 @@ function loadData(fresh){
 }
 loadData(false).then(()=>{
   document.getElementById('foot').textContent='ดึงสดจาก Google Sheet · ดูรายโพสต์ทั้งหมดได้ที่หน้า "วิเคราะห์ตาม Pillar"';
+  const months=[...new Set(DATA.summary.map(r=>r.month).filter(Boolean))];
   const plats=[...new Set(DATA.summary.map(r=>r.platform))];
   const pils=[...new Set(DATA.summary.map(r=>r.pillar))];
+  months.forEach(p=>document.getElementById('fMonth').innerHTML+=`<option>${p}</option>`);
   plats.forEach(p=>document.getElementById('fPlatform').innerHTML+=`<option>${p}</option>`);
   pils.forEach(p=>document.getElementById('fPillar').innerHTML+=`<option>${p}</option>`);
   document.getElementById('apply').onclick=render;
-  document.getElementById('clear').onclick=()=>{document.getElementById('fPlatform').value='';document.getElementById('fPillar').value='';render();};
+  document.getElementById('clear').onclick=()=>{['fMonth','fPlatform','fPillar'].forEach(id=>document.getElementById(id).value='');render();};
   document.getElementById('refresh').onclick=()=>loadData(true);
 });
 </script>

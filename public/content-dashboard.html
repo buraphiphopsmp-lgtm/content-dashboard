@@ -100,8 +100,9 @@ function groupSum(rows,key){
 }
 function makeChart(id,type,labels,data,opts){
   if(charts[id])charts[id].destroy();
+  const datasets=opts.datasets||[Object.assign({data},opts.ds||{})];
   charts[id]=new Chart(document.getElementById(id),{type,
-    data:{labels,datasets:[Object.assign({data},opts.ds||{})]},
+    data:{labels,datasets},
     options:Object.assign({responsive:true,plugins:{legend:{display:opts.legend||false}}},opts.options||{})});
 }
 function render(){
@@ -123,31 +124,42 @@ function render(){
   document.getElementById('kRate').innerHTML=(tImp?pct(tEng/tImp):'–')+(cmp?deltaHTML(tImp?tEng/tImp:0,cImp?cEng/cImp:0):'');
 
   const dl=(color,align)=>({color:color||'#cdd6e6',anchor:'end',align:align||'end',font:{weight:'600',size:11},formatter:v=>v>0?fmt(v):''});
+  const CMPCLR='#5a6473', labP=fm||'ช่วงหลัก', labC=fc, grouped=!!cmp;
 
   const byPlat=groupSum(rows,'platform');
+  const cByPlat=cmp?groupSum(cmp,'platform'):null;
   const platLabels=Object.keys(byPlat).sort((a,b)=>byPlat[b].impressions-byPlat[a].impressions);
-  makeChart('cImpPlat','bar',platLabels,platLabels.map(p=>byPlat[p].impressions),
-    {ds:{backgroundColor:platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff'),borderRadius:6},
+  makeChart('cImpPlat','bar',platLabels,null,
+    {legend:grouped,
+     datasets:[{data:platLabels.map(p=>byPlat[p].impressions),backgroundColor:platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff'),borderRadius:6,label:labP}]
+       .concat(cmp?[{data:platLabels.map(p=>cByPlat[p]?cByPlat[p].impressions:0),backgroundColor:CMPCLR,borderRadius:6,label:labC}]:[]),
      options:{indexAxis:'y',layout:{padding:{right:54}},scales:{x:{ticks:{callback:fmt}}},
-       plugins:{legend:{display:false},datalabels:dl('#cdd6e6','right')}}});
+       plugins:{legend:{display:grouped,labels:{boxWidth:12}},datalabels:grouped?{display:false}:dl('#cdd6e6','right')}}});
 
   makeChart('cPostsPlat','doughnut',platLabels,platLabels.map(p=>byPlat[p].posts),
     {legend:true,ds:{backgroundColor:platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff')},
      options:{plugins:{legend:{position:'right'},datalabels:{color:c=>contrast(c.dataset.backgroundColor[c.dataIndex]),font:{weight:'700',size:12},formatter:v=>v>0?v:''}}}});
 
   const byPil=groupSum(rows,'pillar');
+  const cByPil=cmp?groupSum(cmp,'pillar'):null;
   const pilLabels=Object.keys(byPil).sort((a,b)=>byPil[b].reactions-byPil[a].reactions);
-  makeChart('cEngPillar','bar',pilLabels,pilLabels.map(p=>byPil[p].reactions),
-    {ds:{backgroundColor:'#27c4a6',borderRadius:6},
+  makeChart('cEngPillar','bar',pilLabels,null,
+    {legend:grouped,
+     datasets:[{data:pilLabels.map(p=>byPil[p].reactions),backgroundColor:'#27c4a6',borderRadius:6,label:labP}]
+       .concat(cmp?[{data:pilLabels.map(p=>cByPil[p]?cByPil[p].reactions:0),backgroundColor:CMPCLR,borderRadius:6,label:labC}]:[]),
      options:{layout:{padding:{top:24}},scales:{y:{ticks:{callback:fmt}}},
-       plugins:{legend:{display:false},datalabels:dl('#cdd6e6','top')}}});
+       plugins:{legend:{display:grouped,labels:{boxWidth:12}},datalabels:grouped?{display:false}:dl('#cdd6e6','top')}}});
 
   const rateLabels=pilLabels.slice().sort((a,b)=>(byPil[b].reactions/(byPil[b].impressions||1))-(byPil[a].reactions/(byPil[a].impressions||1)));
-  makeChart('cRatePillar','bar',rateLabels,rateLabels.map(p=>byPil[p].impressions?byPil[p].reactions/byPil[p].impressions*100:0),
-    {ds:{backgroundColor:'#5b8cff',borderRadius:6},
+  const rp=p=>byPil[p]&&byPil[p].impressions?byPil[p].reactions/byPil[p].impressions*100:0;
+  const rc=p=>cByPil&&cByPil[p]&&cByPil[p].impressions?cByPil[p].reactions/cByPil[p].impressions*100:0;
+  makeChart('cRatePillar','bar',rateLabels,null,
+    {legend:grouped,
+     datasets:[{data:rateLabels.map(rp),backgroundColor:'#5b8cff',borderRadius:6,label:labP}]
+       .concat(cmp?[{data:rateLabels.map(rc),backgroundColor:CMPCLR,borderRadius:6,label:labC}]:[]),
      options:{layout:{padding:{top:24}},scales:{y:{ticks:{callback:v=>v+'%'}}},
-       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)+'%'}},
-         datalabels:{color:'#cdd6e6',anchor:'end',align:'top',font:{weight:'600',size:11},formatter:v=>v>0?v.toFixed(1)+'%':''}}}});
+       plugins:{legend:{display:grouped,labels:{boxWidth:12}},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)+'%'}},
+         datalabels:grouped?{display:false}:{color:'#cdd6e6',anchor:'end',align:'top',font:{weight:'600',size:11},formatter:v=>v>0?v.toFixed(1)+'%':''}}}});
 }
 function fmtUpdated(s){const m=(s||'').match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);if(!m)return s||'-';
   const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]));

@@ -308,8 +308,7 @@ loadData(false).then(()=>{
   document.querySelectorAll('#tPosts th.sortable').forEach(th=>th.onclick=()=>{
     const s=th.dataset.s, sf=document.getElementById('sortField'), sd=document.getElementById('sortDir');
     if(sf.value===s)sd.value=sd.value==='desc'?'asc':'desc'; else{sf.value=s;sd.value='desc';} PAGE=1; renderPosts();});
-  const dates=(DATA.posts||[]).map(p=>p.date).filter(Boolean).sort();
-  if(dates.length){['aFrom','aTo','bFrom','bTo'].forEach(id=>{const e=document.getElementById(id);e.min=dates[0];e.max=dates[dates.length-1];});}
+  // ไม่จำกัดช่วงวันที่ — เลือกได้ทุกวัน (รวมวันที่ไม่มีโพสต์)
 });
 </script>
 </body>

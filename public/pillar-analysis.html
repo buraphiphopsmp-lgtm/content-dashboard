@@ -154,7 +154,7 @@ Chart.defaults.font.family="'Segoe UI',Tahoma,'Sarabun',sans-serif";
 
 const platVal=()=>document.getElementById('fPlatform').value;
 const pillarVal=()=>document.getElementById('fPillar').value;
-function scopedRows(){const fp=platVal(),fpi=pillarVal();return DATA.summary.filter(r=>(!fp||r.platform===fp)&&(!fpi||r.pillar===fpi));}
+function scopedRows(){const fp=platVal(),fpi=pillarVal();return DATA.summary.filter(r=>(!fp||r.platform===fp)&&(!fpi||fpi.includes(r.pillar)));}
 function byPillar(rows){
   const m={};
   for(const r of rows){if(!m[r.pillar])m[r.pillar]={pillar:r.pillar,impressions:0,engagement:0,posts:0};
@@ -265,7 +265,7 @@ function loadData(fresh){
 loadData(false).then(()=>{
   document.getElementById('foot').textContent='วิเคราะห์จาก Raw Data by Pillar · ดึงสดจาก Google Sheet';
   const plats=[...new Set(DATA.summary.map(r=>r.platform))];
-  const pils=[...new Set(DATA.summary.map(r=>r.pillar))];
+  const pils=[...new Set((DATA.posts||[]).map(p=>p.pillar).filter(Boolean))].sort();
   plats.forEach(p=>document.getElementById('fPlatform').innerHTML+=`<option>${p}</option>`);
   pils.forEach(p=>document.getElementById('fPillar').innerHTML+=`<option>${p}</option>`);
   document.getElementById('refresh').onclick=()=>loadData(true);

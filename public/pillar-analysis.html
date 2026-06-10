@@ -98,7 +98,7 @@
       <div class="left"><label class="fl">จัดกลุ่มตาม</label>
         <select id="scGroup"><option value="pillar">Pillar</option><option value="network">แพลตฟอร์ม</option></select></div>
     </div>
-    <canvas id="cScatter" style="max-height:480px"></canvas>
+    <canvas id="cScatter" style="max-height:560px"></canvas>
     <div style="color:var(--muted);font-size:12px;margin-top:10px">แต่ละจุด = 1 กลุ่ม · แกน X = Impressions รวม (Volume) · แกน Y = Engagement เฉลี่ย/โพสต์ (Impact) · <b>ขนาดจุด = Engagement รวม</b> · เส้นประ = ค่าเฉลี่ย แบ่ง 4 โซน · อิงช่วง A + แพลตฟอร์มที่เลือก</div>
   </div>
 
@@ -298,8 +298,9 @@ function renderScatter(){
   const arr=Object.values(g).map(o=>({k:o.k,x:o.imp,y:o.eng/o.n,tot:o.eng,n:o.n}));
   const cmap=dim==='network'?PLAT_COLORS:pillarColorMap();
   const maxTot=Math.max(1,...arr.map(o=>o.tot));
+  const maxX=Math.max(1,...arr.map(o=>o.x)), maxY=Math.max(1,...arr.map(o=>o.y));
   const datasets=arr.map(o=>({label:o.k,backgroundColor:(cmap[o.k]||'#888')+'cc',borderColor:cmap[o.k]||'#888',
-    data:[{x:o.x,y:o.y,r:9+Math.sqrt(o.tot/maxTot)*34,n:o.n,tot:o.tot}]}));
+    data:[{x:o.x,y:o.y,r:8+Math.sqrt(o.tot/maxTot)*26,n:o.n,tot:o.tot}]}));
   const m=arr.length||1;
   const avgX=arr.reduce((s,o)=>s+o.x,0)/m, avgY=arr.reduce((s,o)=>s+o.y,0)/m;
   const quad={id:'quad',beforeDatasetsDraw:(ch)=>{const ca=ch.chartArea;if(!ca)return;const ctx=ch.ctx,px=ch.scales.x.getPixelForValue(avgX),py=ch.scales.y.getPixelForValue(avgY);
@@ -320,7 +321,7 @@ function renderScatter(){
   if(scatterChart)scatterChart.destroy();
   scatterChart=new Chart(document.getElementById('cScatter'),{type:'bubble',data:{datasets},
     options:{responsive:true,layout:{padding:{top:8}},
-      scales:{x:{title:{display:true,text:'Impressions รวม (Volume)',color:'#9aa3b2'},ticks:{callback:fmt}},y:{title:{display:true,text:'Engagement เฉลี่ย/โพสต์ (Impact)',color:'#9aa3b2'},ticks:{callback:fmt}}},
+      scales:{x:{min:-maxX*0.05,suggestedMax:maxX*1.1,title:{display:true,text:'Impressions รวม (Volume)',color:'#9aa3b2'},ticks:{callback:v=>v<0?'':fmt(v)}},y:{min:-maxY*0.08,suggestedMax:maxY*1.14,title:{display:true,text:'Engagement เฉลี่ย/โพสต์ (Impact)',color:'#9aa3b2'},ticks:{callback:v=>v<0?'':fmt(v)}}},
       plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8}},datalabels:{display:false},
         tooltip:{callbacks:{title:c=>c[0].dataset.label,label:c=>'โพสต์ '+c.raw.n+' · Imp รวม '+fmt(c.raw.x)+' · Eng เฉลี่ย '+fmt(Math.round(c.raw.y))+' · Eng รวม '+fmt(c.raw.tot)}}}},
     plugins:[quad]});

@@ -176,13 +176,15 @@ const engPN=(arr,pillar,net)=>arr.filter(p=>p.pillar===pillar&&p.network===net).
 function bar(id,labels,data,color,fmtFn,horizontal,compareData,labA,labB){
   if(charts[id])charts[id].destroy();
   const hasC=!!compareData;
+  const allV=(data||[]).concat(compareData||[]).filter(x=>typeof x==='number');
+  const sMax=(Math.max(0,...allV)*(hasC?1.3:1.15))||undefined;
   const datasets=[{data,backgroundColor:color,borderRadius:6,label:labA||'ช่วง A'}];
   if(hasC)datasets.push({data:compareData,backgroundColor:'#5a6473',borderRadius:6,label:labB||'ช่วง B'});
   charts[id]=new Chart(document.getElementById(id),{type:'bar',
     data:{labels,datasets},
     options:{responsive:true,indexAxis:horizontal?'y':'x',
       layout:{padding:horizontal?{right:54}:{top:hasC?56:24}},
-      scales:horizontal?{x:{ticks:{callback:fmtFn}}}:{y:{ticks:{callback:fmtFn}}},
+      scales:horizontal?{x:{ticks:{callback:fmtFn},suggestedMax:sMax}}:{y:{ticks:{callback:fmtFn},suggestedMax:sMax}},
       plugins:{legend:{display:hasC,labels:{boxWidth:12}},
         datalabels:{display:'auto',clamp:true,color:'#cdd6e6',anchor:'end',align:horizontal?'right':'top',rotation:(!horizontal&&hasC)?-90:0,font:{weight:'600',size:hasC?9:11},formatter:x=>x>0?fmtFn(x):''}}}});
 }

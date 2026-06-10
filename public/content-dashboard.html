@@ -125,6 +125,7 @@ function render(){
 
   const CMPCLR='#5a6473', labP=fm||'ช่วงหลัก', labC=fc, grouped=!!cmp;
   const dl=(color,align,rot)=>({display:'auto',clamp:true,color:color||'#cdd6e6',anchor:'end',align:align||'end',rotation:rot||0,font:{weight:'600',size:grouped?9:11},formatter:v=>v>0?fmt(v):''});
+  const sM=(vals)=>(Math.max(0,...vals)*(grouped?1.28:1.14))||undefined;
 
   const byPlat=groupSum(rows,'platform');
   const cByPlat=cmp?groupSum(cmp,'platform'):null;
@@ -133,7 +134,7 @@ function render(){
     {legend:grouped,
      datasets:[{data:platLabels.map(p=>byPlat[p].impressions),backgroundColor:platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff'),borderRadius:6,label:labP}]
        .concat(cmp?[{data:platLabels.map(p=>cByPlat[p]?cByPlat[p].impressions:0),backgroundColor:CMPCLR,borderRadius:6,label:labC}]:[]),
-     options:{indexAxis:'y',layout:{padding:{right:54}},scales:{x:{ticks:{callback:fmt}}},
+     options:{indexAxis:'y',layout:{padding:{right:54}},scales:{x:{ticks:{callback:fmt},suggestedMax:sM(platLabels.map(p=>Math.max(byPlat[p].impressions,cByPlat&&cByPlat[p]?cByPlat[p].impressions:0)))}},
        plugins:{legend:{display:grouped,labels:{boxWidth:12}},datalabels:dl('#cdd6e6','right')}}});
 
   const postCols=platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff');
@@ -152,7 +153,7 @@ function render(){
     {legend:grouped,
      datasets:[{data:pilLabels.map(p=>byPil[p].reactions),backgroundColor:'#27c4a6',borderRadius:6,label:labP}]
        .concat(cmp?[{data:pilLabels.map(p=>cByPil[p]?cByPil[p].reactions:0),backgroundColor:CMPCLR,borderRadius:6,label:labC}]:[]),
-     options:{layout:{padding:{top:grouped?56:24}},scales:{y:{ticks:{callback:fmt}}},
+     options:{layout:{padding:{top:grouped?56:24}},scales:{y:{ticks:{callback:fmt},suggestedMax:sM(pilLabels.map(p=>Math.max(byPil[p].reactions,cByPil&&cByPil[p]?cByPil[p].reactions:0)))}},
        plugins:{legend:{display:grouped,labels:{boxWidth:12}},datalabels:dl('#cdd6e6','top',grouped?-90:0)}}});
 
   const rateLabels=pilLabels.slice().sort((a,b)=>(byPil[b].reactions/(byPil[b].impressions||1))-(byPil[a].reactions/(byPil[a].impressions||1)));
@@ -162,7 +163,7 @@ function render(){
     {legend:grouped,
      datasets:[{data:rateLabels.map(rp),backgroundColor:'#5b8cff',borderRadius:6,label:labP}]
        .concat(cmp?[{data:rateLabels.map(rc),backgroundColor:CMPCLR,borderRadius:6,label:labC}]:[]),
-     options:{layout:{padding:{top:grouped?56:24}},scales:{y:{ticks:{callback:v=>v+'%'}}},
+     options:{layout:{padding:{top:grouped?56:24}},scales:{y:{ticks:{callback:v=>v+'%'},suggestedMax:sM(rateLabels.map(p=>Math.max(rp(p),rc(p))))}},
        plugins:{legend:{display:grouped,labels:{boxWidth:12}},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)+'%'}},
          datalabels:{display:'auto',clamp:true,color:'#cdd6e6',anchor:'end',align:'top',rotation:grouped?-90:0,font:{weight:'600',size:grouped?9:11},formatter:v=>v>0?v.toFixed(1)+'%':''}}}});
 }

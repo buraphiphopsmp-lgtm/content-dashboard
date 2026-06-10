@@ -100,7 +100,7 @@
         <select id="scGroup"><option value="pillar">Pillar</option><option value="network">แพลตฟอร์ม</option></select></div>
     </div>
     <canvas id="cScatter" style="max-height:560px"></canvas>
-    <div style="color:var(--muted);font-size:12px;margin-top:10px">แต่ละจุด = 1 กลุ่ม · แกน X = Impressions รวม (Volume) · แกน Y = Engagement เฉลี่ย/โพสต์ (Impact) · <b>ขนาดจุด = Engagement รวม</b> · เส้นประ = ค่าเฉลี่ย แบ่ง 4 โซน · อิงช่วง A + แพลตฟอร์มที่เลือก</div>
+    <div style="color:var(--muted);font-size:12px;margin-top:10px">แต่ละจุด = 1 กลุ่ม · แกน X = Impressions เฉลี่ย/โพสต์ (Reach) · แกน Y = Engagement เฉลี่ย/โพสต์ (Impact) · <b>ขนาดจุด = จำนวนโพสต์</b> · เส้นประ = ค่าเฉลี่ย แบ่ง 4 โซน · อิงช่วง A + แพลตฟอร์มที่เลือก</div>
   </div>
 
   <div class="card">
@@ -296,12 +296,12 @@ function renderScatter(){
   const dim=v('scGroup')||'pillar';
   const g={};
   A.forEach(p=>{const k=p[dim]||'(ไม่ระบุ)';if(!g[k])g[k]={k,imp:0,eng:0,n:0};g[k].imp+=p.impressions;g[k].eng+=p.engagement;g[k].n++;});
-  const arr=Object.values(g).map(o=>({k:o.k,x:o.imp,y:o.eng/o.n,tot:o.eng,n:o.n}));
+  const arr=Object.values(g).map(o=>({k:o.k,x:o.imp/o.n,y:o.eng/o.n,tot:o.eng,n:o.n}));
   const cmap=dim==='network'?PLAT_COLORS:pillarColorMap();
-  const maxTot=Math.max(1,...arr.map(o=>o.tot));
+  const maxN=Math.max(1,...arr.map(o=>o.n));
   const maxX=Math.max(1,...arr.map(o=>o.x)), maxY=Math.max(1,...arr.map(o=>o.y));
   const datasets=arr.map(o=>({label:o.k,backgroundColor:(cmap[o.k]||'#888')+'cc',borderColor:cmap[o.k]||'#888',
-    data:[{x:o.x,y:o.y,r:8+Math.sqrt(o.tot/maxTot)*26,n:o.n,tot:o.tot}]}));
+    data:[{x:o.x,y:o.y,r:8+Math.sqrt(o.n/maxN)*26,n:o.n,tot:o.tot}]}));
   const m=arr.length||1;
   const avgX=arr.reduce((s,o)=>s+o.x,0)/m, avgY=arr.reduce((s,o)=>s+o.y,0)/m;
   const quad={id:'quad',beforeDatasetsDraw:(ch)=>{const ca=ch.chartArea;if(!ca)return;const ctx=ch.ctx,px=ch.scales.x.getPixelForValue(avgX),py=ch.scales.y.getPixelForValue(avgY);
@@ -311,10 +311,10 @@ function renderScatter(){
     ctx.fillStyle='rgba(255,107,107,.10)';ctx.fillRect(ca.left,py,px-ca.left,ca.bottom-py);
     ctx.fillStyle='rgba(155,140,255,.13)';ctx.fillRect(px,py,ca.right-px,ca.bottom-py);
     ctx.font='700 11px sans-serif';ctx.textBaseline='middle';
-    ctx.textAlign='left';ctx.fillStyle='rgba(120,160,255,.85)';ctx.fillText('High Impact · Low Volume',ca.left+10,ca.top+12);
-    ctx.textAlign='right';ctx.fillStyle='rgba(39,196,166,.85)';ctx.fillText('High Engagement · High Volume',ca.right-10,ca.top+12);
-    ctx.textAlign='left';ctx.fillStyle='rgba(255,107,107,.85)';ctx.fillText('Low Impact · Low Volume',ca.left+10,ca.bottom-12);
-    ctx.textAlign='right';ctx.fillStyle='rgba(170,150,255,.9)';ctx.fillText('Low Impact · High Volume',ca.right-10,ca.bottom-12);
+    ctx.textAlign='left';ctx.fillStyle='rgba(120,160,255,.85)';ctx.fillText('High Impact · Low Reach',ca.left+10,ca.top+12);
+    ctx.textAlign='right';ctx.fillStyle='rgba(39,196,166,.85)';ctx.fillText('High Impact · High Reach',ca.right-10,ca.top+12);
+    ctx.textAlign='left';ctx.fillStyle='rgba(255,107,107,.85)';ctx.fillText('Low Impact · Low Reach',ca.left+10,ca.bottom-12);
+    ctx.textAlign='right';ctx.fillStyle='rgba(170,150,255,.9)';ctx.fillText('Low Impact · High Reach',ca.right-10,ca.bottom-12);
     ctx.textAlign='left';ctx.textBaseline='alphabetic';
     ctx.setLineDash([5,4]);ctx.strokeStyle='rgba(255,255,255,.32)';ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(px,ca.top);ctx.lineTo(px,ca.bottom);ctx.stroke();
@@ -323,9 +323,9 @@ function renderScatter(){
   if(scatterChart)scatterChart.destroy();
   scatterChart=new Chart(document.getElementById('cScatter'),{type:'bubble',data:{datasets},
     options:{responsive:true,layout:{padding:{top:8}},
-      scales:{x:{min:-maxX*0.05,suggestedMax:maxX*1.1,title:{display:true,text:'Impressions รวม (Volume)',color:'#9aa3b2'},ticks:{callback:v=>v<0?'':fmt(v)}},y:{min:-maxY*0.08,suggestedMax:maxY*1.14,title:{display:true,text:'Engagement เฉลี่ย/โพสต์ (Impact)',color:'#9aa3b2'},ticks:{callback:v=>v<0?'':fmt(v)}}},
+      scales:{x:{min:-maxX*0.05,suggestedMax:maxX*1.1,title:{display:true,text:'Impressions เฉลี่ย/โพสต์ (Reach)',color:'#9aa3b2'},ticks:{callback:v=>v<0?'':fmt(v)}},y:{min:-maxY*0.08,suggestedMax:maxY*1.14,title:{display:true,text:'Engagement เฉลี่ย/โพสต์ (Impact)',color:'#9aa3b2'},ticks:{callback:v=>v<0?'':fmt(v)}}},
       plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8}},datalabels:{display:false},
-        tooltip:{callbacks:{title:c=>c[0].dataset.label,label:c=>'โพสต์ '+c.raw.n+' · Imp รวม '+fmt(c.raw.x)+' · Eng เฉลี่ย '+fmt(Math.round(c.raw.y))+' · Eng รวม '+fmt(c.raw.tot)}}}},
+        tooltip:{callbacks:{title:c=>c[0].dataset.label,label:c=>'โพสต์ '+c.raw.n+' · Imp เฉลี่ย '+fmt(Math.round(c.raw.x))+' · Eng เฉลี่ย '+fmt(Math.round(c.raw.y))+' · Eng รวม '+fmt(c.raw.tot)}}}},
     plugins:[quad]});
 }
 function renderAll(){renderCharts();renderScatter();renderPosts();}

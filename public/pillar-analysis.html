@@ -93,6 +93,12 @@
   </div>
 
   <div class="card">
+    <h3>Bubble: Impressions × Engagement (รายโพสต์ · ช่วง A)</h3>
+    <canvas id="cScatter" style="max-height:460px"></canvas>
+    <div style="color:var(--muted);font-size:12px;margin-top:10px">แต่ละจุด = 1 โพสต์ · สี = Pillar · ขนาดจุด = Engagement Rate · เส้นประ = ค่าเฉลี่ย (แบ่ง 4 โซน) · อิงช่วง A + แพลตฟอร์มที่เลือก</div>
+  </div>
+
+  <div class="card">
     <h3>ตารางสรุปตาม Pillar</h3>
     <div style="overflow-x:auto">
     <table id="tbl">
@@ -277,7 +283,32 @@ function renderPosts(){
   document.getElementById('prev').disabled=PAGE<=1;
   document.getElementById('next').disabled=PAGE>=pages;
 }
-function renderAll(){renderCharts();renderPosts();}
+const PALETTE=['#5b8cff','#27c4a6','#E4405F','#f5a524','#9b8cff','#25F4EE','#ff7a59','#7ee787','#f78fb3','#54a0ff','#c9cdd6'];
+let scatterChart;
+function pillarColorMap(){const ps=[...new Set((DATA.posts||[]).map(p=>p.pillar).filter(Boolean))].sort();const m={};ps.forEach((p,i)=>m[p]=PALETTE[i%PALETTE.length]);return m;}
+function renderScatter(){
+  const A=periodPosts(v('aFrom'),v('aTo')).filter(p=>p.impressions>0);
+  const cmap=pillarColorMap();
+  const pillars=[...new Set(A.map(p=>p.pillar))];
+  const datasets=pillars.map(pl=>({label:pl,backgroundColor:(cmap[pl]||'#888')+'cc',borderColor:cmap[pl]||'#888',
+    data:A.filter(p=>p.pillar===pl).map(p=>{const rate=p.impressions?p.engagement/p.impressions:0;return {x:p.impressions,y:p.engagement,r:Math.max(4,Math.min(22,4+rate*140)),rate,m:p.message};})}));
+  const n=A.length||1;
+  const avgX=A.reduce((s,p)=>s+p.impressions,0)/n, avgY=A.reduce((s,p)=>s+p.engagement,0)/n;
+  const quad={id:'quad',afterDatasetsDraw:(ch)=>{const ca=ch.chartArea;if(!ca)return;const ctx=ch.ctx,px=ch.scales.x.getPixelForValue(avgX),py=ch.scales.y.getPixelForValue(avgY);
+    ctx.save();ctx.strokeStyle='rgba(255,255,255,.28)';ctx.setLineDash([5,4]);ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(px,ca.top);ctx.lineTo(px,ca.bottom);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(ca.left,py);ctx.lineTo(ca.right,py);ctx.stroke();
+    ctx.setLineDash([]);ctx.fillStyle='rgba(231,234,240,.55)';ctx.font='11px sans-serif';
+    ctx.fillText('avg Imp '+fmt(avgX),px+4,ca.top+12);ctx.fillText('avg Eng '+fmt(avgY),ca.left+6,py-4);ctx.restore();}};
+  if(scatterChart)scatterChart.destroy();
+  scatterChart=new Chart(document.getElementById('cScatter'),{type:'bubble',data:{datasets},
+    options:{responsive:true,
+      scales:{x:{title:{display:true,text:'Impressions',color:'#9aa3b2'},ticks:{callback:fmt}},y:{title:{display:true,text:'Engagement',color:'#9aa3b2'},ticks:{callback:fmt}}},
+      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8}},datalabels:{display:false},
+        tooltip:{callbacks:{title:c=>c[0].dataset.label,label:c=>'Imp '+c.raw.x.toLocaleString()+' · Eng '+c.raw.y.toLocaleString()+' · Rate '+(c.raw.rate*100).toFixed(2)+'%',afterLabel:c=>(c.raw.m||'').slice(0,80)}}}},
+    plugins:[quad]});
+}
+function renderAll(){renderCharts();renderScatter();renderPosts();}
 
 function setSub(){const m=DATA.meta||{};
   document.getElementById('sub').textContent=`ข้อมูล: ${m.source||''} · ${(DATA.posts||[]).length} โพสต์ · เทียบ 2 ช่วงด้วยวันที่`;

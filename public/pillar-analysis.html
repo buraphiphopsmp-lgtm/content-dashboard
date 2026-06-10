@@ -152,7 +152,7 @@ const fmt=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':Math.ro
 const pct=n=>(n*100).toFixed(2)+'%';
 const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const contrast=h=>{const c=(h||'').replace('#','').slice(0,6);const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return (0.299*r+0.587*g+0.114*b)/255>0.6?'#11151c':'#fff';};
-function deltaHTML(cur,prev){if(prev===undefined||prev===null)return '';if(prev===0)return cur>0?'<span class="dlt up">▲ ใหม่</span>':'';const d=(cur-prev)/prev*100,up=d>=0;return `<span class="dlt ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(d).toFixed(1)}%</span>`;}
+function deltaHTML(cur,prev){if(!prev)return '';const d=(cur-prev)/prev*100,up=d>=0;return `<span class="dlt ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(d).toFixed(1)}%</span>`;}
 let DATA, charts={}, sortKey='engagement', sortDir=-1, PAGE=1, PER=20;
 
 Chart.register(ChartDataLabels);
@@ -240,8 +240,8 @@ function renderPillarTable(pil,cmp){
     tr.innerHTML=`<td>${esc(p.pillar)}</td><td class="num">${p.posts.toLocaleString()}</td>
       <td class="num">${p.impressions.toLocaleString()}</td><td class="num">${p.engagement.toLocaleString()}</td>
       <td class="num">${pct(p.rate)}</td><td class="num">${Math.round(p.epp).toLocaleString()}</td>
-      <td class="num">${has?(deltaHTML(p.impressions,c?c.impressions:0)||'0%'):'—'}</td>
-      <td class="num">${has?(deltaHTML(p.engagement,c?c.engagement:0)||'0%'):'—'}</td>`;
+      <td class="num">${has&&c&&c.impressions>0?deltaHTML(p.impressions,c.impressions):'—'}</td>
+      <td class="num">${has&&c&&c.engagement>0?deltaHTML(p.engagement,c.engagement):'—'}</td>`;
     tb.appendChild(tr);});
 }
 

@@ -84,7 +84,7 @@ const PLAT_COLORS={Facebook:'#1877F2',Instagram:'#E4405F',TikTok:'#25F4EE',X:'#E
 const contrast=h=>{const c=(h||'').replace('#','');const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return (0.299*r+0.587*g+0.114*b)/255>0.6?'#11151c':'#fff';};
 const fmt=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':Math.round(n).toLocaleString();
 const pct=n=>(n*100).toFixed(2)+'%';
-function deltaHTML(cur,prev){if(prev===undefined||prev===null)return '';if(prev===0)return cur>0?'<span class="dlt up">▲ ใหม่</span>':'';const d=(cur-prev)/prev*100,up=d>=0;return `<span class="dlt ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(d).toFixed(1)}%</span>`;}
+function deltaHTML(cur,prev){if(!prev)return '';const d=(cur-prev)/prev*100,up=d>=0;return `<span class="dlt ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(d).toFixed(1)}%</span>`;}
 let DATA, charts={};
 
 Chart.register(ChartDataLabels);

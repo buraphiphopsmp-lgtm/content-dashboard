@@ -167,7 +167,7 @@
 </div>
 
 <script>
-const PLAT_COLORS={Facebook:'#1877F2',Instagram:'#C13584',TikTok:'#25F4EE',X:'#E7E9EA',YouTube:'#FF0000'};
+const PLAT_COLORS={Facebook:'#1877F2',Instagram:'#C13584',TikTok:'#25F4EE',X:'#000000',YouTube:'#FF0000'};
 const PLAT_GRAD={Instagram:['#833AB4','#C13584','#FD1D1D'],TikTok:['#00F2FE','#25F4EE','#FE0979']};
 function platFill(plat,c,horizontal){
   const stops=PLAT_GRAD[plat], area=c.chart.chartArea;
@@ -248,7 +248,7 @@ function renderCharts(){
   const fp=platVal();
   const pilNames=byEng.map(p=>p.pillar);
   const nets=[...new Set((DATA.posts||[]).map(p=>p.network))].filter(n=>!fp||n===fp);
-  const ds=nets.map(n=>({label:n,stack:'p',backgroundColor:c=>platFill(n,c,false),data:pilNames.map(pn=>engPN(A,pn,n))}));
+  const ds=nets.map(n=>({label:n,stack:'p',backgroundColor:c=>platFill(n,c,false),borderColor:'#5a5f6b',borderWidth:n==='X'?1.5:0,data:pilNames.map(pn=>engPN(A,pn,n))}));
   if(B)nets.forEach(n=>ds.push({label:n,stack:'c',backgroundColor:(PLAT_COLORS[n]||'#888')+'66',data:pilNames.map(pn=>engPN(B,pn,n))}));
   if(charts.cStack)charts.cStack.destroy();
   charts.cStack=new Chart(document.getElementById('cStack'),{type:'bar',
@@ -305,7 +305,7 @@ function renderPosts(){
   const tb=document.querySelector('#tPosts tbody'); tb.innerHTML='';
   slice.forEach((p,i)=>{const col=PLAT_COLORS[p.network]||'#9aa3b2';const tr=document.createElement('tr');
     tr.innerHTML=`<td>${start+i+1}</td><td style="white-space:nowrap">${p.date||''}</td>
-      <td><span class="badge" style="background:${col}22;color:${col}">${esc(p.network)}</span></td>
+      <td><span class="badge" style="background:${col==='#000000'?'#000':col+'22'};color:${col==='#000000'?'#fff':col};border:1px solid ${col==='#000000'?'#4a4f5b':'transparent'}">${esc(p.network)}</span></td>
       <td>${esc(p.pillar)}</td><td>${esc(p.profile)}</td>
       <td class="num">${(p.engagement||0).toLocaleString()}</td><td class="num">${(p.impressions||0).toLocaleString()}</td>
       <td class="msg">${esc(p.message)}</td>

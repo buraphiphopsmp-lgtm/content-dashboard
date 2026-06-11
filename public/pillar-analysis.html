@@ -29,6 +29,8 @@
   .btn:hover{filter:brightness(1.1)} .btn:disabled{opacity:.6;cursor:default}
   .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)} .btn.ghost:hover{color:var(--txt);filter:none}
   .dlt{font-size:12px;font-weight:700;white-space:nowrap}.dlt.up{color:#2ecc71}.dlt.down{color:#ff6b6b}
+  .p2{color:var(--muted);font-size:11px;margin-top:3px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
   .upd{display:inline-flex;align-items:center;gap:4px;background:rgba(39,196,166,.12);color:var(--accent2);border:1px solid rgba(39,196,166,.35);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:600;white-space:nowrap}
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
   .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
@@ -110,6 +112,7 @@
 
   <div class="card">
     <h3>ตารางสรุปตาม Pillar</h3>
+    <div id="tblNote" style="color:var(--muted);font-size:12px;margin:-4px 0 10px"></div>
     <div style="overflow-x:auto">
     <table id="tbl">
       <thead><tr>
@@ -246,19 +249,27 @@ function renderCharts(){
         datalabels:{display:'auto',clamp:true,color:c=>contrast(c.dataset.backgroundColor),anchor:'center',align:'center',font:{weight:'700',size:9},formatter:x=>x>0?fmt(x):''},
         tooltip:{callbacks:{label:c=>`${c.dataset.label} (${c.dataset.stack==='c'?labB:labA}): ${fmt(c.parsed.y)}`}}}}});
 
-  renderPillarTable(pilA,cmpMap);
+  renderPillarTable(pilA,cmpMap,labA,labB);
 }
 
-function renderPillarTable(pil,cmp){
+function renderPillarTable(pil,cmp,labA,labB){
   cmp=cmp||{};
+  const has=Object.keys(cmp).length>0;
   const arr=pil.slice().sort((a,b)=> sortKey==='pillar'
     ? (a.pillar>b.pillar?sortDir:a.pillar<b.pillar?-sortDir:0) : (a[sortKey]-b[sortKey])*sortDir);
+  const note=document.getElementById('tblNote');
+  if(note)note.innerHTML=has
+    ?`แต่ละช่องแสดง 2 ค่า: <span class="dot" style="background:#5b8cff"></span><b>${esc(labA||'ช่วงหลัก')}</b> (บรรทัดบน) เทียบกับ <span class="dot" style="background:#9aa3b2"></span>${esc(labB||'ช่วงเทียบ')} (บรรทัดล่าง) · Δ = % เปลี่ยนแปลง`
+    :'เลือกช่วง B ที่ฟิลเตอร์ด้านบนเพื่อเปรียบเทียบ 2 ช่วงเวลา';
   const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
-  const has=Object.keys(cmp).length>0;
+  const sub=t=>has?`<div class="p2">${t}</div>`:'';
   arr.forEach(p=>{const c=cmp[p.pillar];const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${esc(p.pillar)}</td><td class="num">${p.posts.toLocaleString()}</td>
-      <td class="num">${p.impressions.toLocaleString()}</td><td class="num">${p.engagement.toLocaleString()}</td>
-      <td class="num">${pct(p.rate)}</td><td class="num">${Math.round(p.epp).toLocaleString()}</td>
+    tr.innerHTML=`<td>${esc(p.pillar)}</td>
+      <td class="num">${p.posts.toLocaleString()}${sub(c?c.posts.toLocaleString():'—')}</td>
+      <td class="num">${p.impressions.toLocaleString()}${sub(c?c.impressions.toLocaleString():'—')}</td>
+      <td class="num">${p.engagement.toLocaleString()}${sub(c?c.engagement.toLocaleString():'—')}</td>
+      <td class="num">${pct(p.rate)}${sub(c?pct(c.rate):'—')}</td>
+      <td class="num">${Math.round(p.epp).toLocaleString()}${sub(c?Math.round(c.epp).toLocaleString():'—')}</td>
       <td class="num">${has&&c&&c.impressions>0?deltaHTML(p.impressions,c.impressions):'—'}</td>
       <td class="num">${has&&c&&c.engagement>0?deltaHTML(p.engagement,c.engagement):'—'}</td>`;
     tb.appendChild(tr);});

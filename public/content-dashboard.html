@@ -37,6 +37,13 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
   .card h3{margin:0 0 12px;font-size:15px;font-weight:600}
   canvas{max-height:320px}
+  .donutWrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .donutCv{flex:1 1 300px;min-width:260px}
+  .legendTbl{display:flex;flex-direction:column;gap:11px;flex:0 0 auto}
+  .legendTbl .row{display:flex;align-items:center;gap:11px;color:#fff;white-space:nowrap;font-size:15px}
+  .legendTbl .sw{width:18px;height:18px;border-radius:4px;flex:none}
+  .legendTbl .nm{font-weight:700;min-width:82px;color:#fff}
+  .legendTbl .vl{font-weight:600;color:#fff}
   .foot{color:var(--muted);font-size:12px;margin-top:18px;text-align:center}
   @media(max-width:880px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
 </style>
@@ -77,7 +84,7 @@
 
   <div class="grid">
     <div class="card"><h3>Impressions ตามแพลตฟอร์ม</h3><canvas id="cImpPlat"></canvas></div>
-    <div class="card"><h3>สัดส่วนจำนวนโพสต์ตามแพลตฟอร์ม</h3><canvas id="cPostsPlat"></canvas></div>
+    <div class="card"><h3>สัดส่วนจำนวนโพสต์ตามแพลตฟอร์ม</h3><div class="donutWrap"><div class="donutCv"><canvas id="cPostsPlat"></canvas></div><div id="postsLegend" class="legendTbl"></div></div></div>
     <div class="card"><h3>Engagement ตาม Content Pillar</h3><canvas id="cEngPillar"></canvas></div>
     <div class="card"><h3>Engagement Rate ตาม Pillar</h3><canvas id="cRatePillar"></canvas></div>
   </div>
@@ -153,12 +160,14 @@ function render(){
      options:{indexAxis:'y',layout:{padding:{right:54}},scales:{x:{ticks:{callback:fmt},suggestedMax:sM(platLabels.map(p=>Math.max(byPlat[p].impressions,cByPlat&&cByPlat[p]?cByPlat[p].impressions:0)))}},
        plugins:{legend:{display:grouped,labels:{boxWidth:12}},datalabels:dl('#cdd6e6','right')}}});
 
+  const totPosts=platLabels.reduce((s,p)=>s+byPlat[p].posts,0);
+  document.getElementById('postsLegend').innerHTML=platLabels.map(p=>{const v=byPlat[p].posts,c=PLAT_COLORS[p]||'#5b8cff',br=(c==='#000000')?';border:1px solid #4a4f5b':'';return `<div class="row"><span class="sw" style="background:${c}${br}"></span><span class="nm">${p}</span><span class="vl">${totPosts?Math.round(v/totPosts*100):0}% (${v.toLocaleString()})</span></div>`;}).join('');
   const postCols=platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff');
   makeChart('cPostsPlat','doughnut',platLabels,null,
     {legend:true,
      datasets:[{data:platLabels.map(p=>byPlat[p].posts),backgroundColor:c=>platFill(platLabels[c.dataIndex],c,false),borderColor:'#3a3f4b',borderWidth:1.5,label:labP}]
        .concat(cmp?[{data:platLabels.map(p=>cByPlat[p]?cByPlat[p].posts:0),backgroundColor:postCols.map(c=>c+'66'),label:labC,weight:0.5}]:[]),
-     options:{layout:{padding:{top:34,bottom:34,left:10,right:10}},plugins:{legend:{position:'right',labels:{color:'#ffffff',font:{size:15,weight:'bold'},boxWidth:20,boxHeight:14,padding:18,generateLabels:ch=>ch.data.labels.map((l,i)=>{const t=ch.data.datasets[0].data.reduce((s,x)=>s+(x||0),0),v=ch.data.datasets[0].data[i]||0;return {text:`${l}  ${t?Math.round(v/t*100):0}% (${v.toLocaleString()})`,fillStyle:PLAT_COLORS[l]||'#5b8cff',strokeStyle:PLAT_COLORS[l]||'#5b8cff',index:i};})}},
+     options:{layout:{padding:{top:34,bottom:34,left:10,right:10}},plugins:{legend:{display:false},
        datalabels:{clamp:true,clip:false,
          color:'#ffffff',
          anchor:c=>{const t=c.dataset.data.reduce((s,x)=>s+(x||0),0),p=t?(c.dataset.data[c.dataIndex]||0)/t:0;return p<0.05?'end':'center';},

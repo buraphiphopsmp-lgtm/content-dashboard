@@ -12,6 +12,7 @@ const GID_POSTS   = '277724235';   // แท็บรายโพสต์ (Pill
 const GID_TUTOR   = '46843437';    // แท็บ "Raw data by Tutor Platform" (Follower, Follower Growth, Tutor, Network ...)
 const GID_TCONTENT = '1543994548'; // แท็บ "Raw data Top content (incl. Tutor Platform)" (post-level by tutor)
 const GID_COLLAB   = '1620780602'; // แท็บ "Raw Data Tutor Overview (IG Collab Post)" (สรุป IG collab รายเดือน)
+const GID_COLLABPOSTS = '1522627842'; // แท็บ "Raw data Post with Tutor Account (IG Collab)" (post-level)
 const CACHE_MS = 2 * 60 * 1000;    // cache 2 นาที
 const csvUrl = (gid) => `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
 
@@ -132,6 +133,25 @@ function buildCollab(rows) {
     watch: Math.round(num(r[c.watch]) * 100) / 100,
   })).filter(x => x.tutor);
 }
+function buildCollabPosts(rows) {
+  const h = header(rows);
+  const c = { date: h.exact('Date'), tutor: h.exact('Tutor'), collab: h.exact('Collaboration'),
+    network: h.exact('Network'), profile: h.exact('Profile'), message: h.exact('Message'),
+    eng: h.incl('Reactions'), impressions: h.exact('Impressions/views of posts'),
+    reach: h.incl('Reach per post'), rate: h.incl('Engage Rate'), link: h.exact('Link') };
+  return h.body.map(r => {
+    let msg = clean(r[c.message])
+      .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
+    if (msg.length > 80) msg = msg.slice(0, 80) + '...';
+    return {
+      date: toISO(r[c.date]), tutor: clean(r[c.tutor]), collaboration: clean(r[c.collab]),
+      network: normNet(r[c.network]), profile: clean(r[c.profile]),
+      engagement: Math.round(num(r[c.eng])), impressions: Math.round(num(r[c.impressions])),
+      reachPerPost: Math.round(num(r[c.reach])), rate: num(r[c.rate]),
+      message: msg, link: clean(r[c.link]).replace(/\\/g, ''),
+    };
+  }).filter(x => x.tutor || x.collaboration);
+}
 
 async function getData(force) {
   if (!force && CACHE.data && Date.now() - CACHE.ts < CACHE_MS) return CACHE.data;
@@ -144,11 +164,13 @@ async function getData(force) {
   try { tutorPosts = buildTutorPosts(await fetchCsv(GID_TCONTENT)); } catch (e) { /* optional */ }
   let collab = [];
   try { collab = buildCollab(await fetchCsv(GID_COLLAB)); } catch (e) { /* optional */ }
+  let collabPosts = [];
+  try { collabPosts = buildCollabPosts(await fetchCsv(GID_COLLABPOSTS)); } catch (e) { /* optional */ }
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   const stamp = `${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())} UTC`;
   const data = { meta: { source: 'Raw data Pillar SMP', month: 'May 2026', generatedAt: stamp,
-    rows: summary.length, postsAnalyzed: posts.length }, summary, posts, tutors, tutorPosts, collab };
+    rows: summary.length, postsAnalyzed: posts.length }, summary, posts, tutors, tutorPosts, collab, collabPosts };
   CACHE = { ts: Date.now(), data };
   return data;
 }

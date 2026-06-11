@@ -40,6 +40,13 @@
   th.sortable{cursor:pointer;user-select:none}th.sortable:hover{color:var(--txt)}
   td.num,th.num{text-align:right;white-space:nowrap}
   .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .tbar .left{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .msg{color:var(--muted);max-width:340px}
+  a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+  input[type=date]{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit}
+  .pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:14px;color:var(--muted)}
+  .pager button{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px}
+  .pager button:disabled{opacity:.4;cursor:default}
   .foot{color:var(--muted);font-size:12px;margin:18px 0;text-align:center}
   @media(max-width:880px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
 </style>
@@ -99,6 +106,26 @@
       <tbody></tbody>
     </table>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="tbar">
+      <h3 style="margin:0">🏆 Top Content (โพสต์ IG Collab)</h3>
+      <div class="left">
+        <label class="fl">Collab</label><select id="cpCollab"><option value="">ทั้งหมด</option></select>
+        <label class="fl" style="margin-left:6px">วันที่</label><input type="date" id="cpFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="cpTo">
+        <label class="fl" style="margin-left:6px">เรียงตาม</label>
+        <select id="cpSort"><option value="engagement">Engagement</option><option value="impressions">Impressions</option><option value="reachPerPost">Reach/post</option><option value="rate">Eng Rate</option><option value="date">วันที่</option></select>
+        <select id="cpDir"><option value="desc">มาก → น้อย</option><option value="asc">น้อย → มาก</option></select>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+    <table id="cpTable"><thead><tr>
+      <th>#</th><th>วันที่</th><th>Collaboration</th><th>Tutor</th><th>Profile</th>
+      <th class="num">Engagement</th><th class="num">Impressions</th><th class="num">Reach/post</th><th class="num">Eng Rate</th><th>Message</th><th>Link</th>
+    </tr></thead><tbody></tbody></table>
+    </div>
+    <div class="pager"><span id="cpInfo"></span><button id="cpPrev">‹ ก่อนหน้า</button><button id="cpNext">ถัดไป ›</button></div>
   </div>
 
   <div class="foot" id="foot"></div>
@@ -179,6 +206,31 @@ function renderTable(a){
     tb.appendChild(tr);});
 }
 
+let CPPAGE=1; const CPPER=20;
+function cpFiltered(){
+  const cl=v('cpCollab'),f=v('cpFrom'),t=v('cpTo');
+  let arr=(DATA.collabPosts||[]).filter(p=>(!cl||p.collaboration===cl)&&(!f||(p.date||'')>=f)&&(!t||(p.date||'')<=t));
+  const sf=v('cpSort'),dir=v('cpDir')==='asc'?1:-1;
+  arr.sort((a,b)=> sf==='date'?(a.date>b.date?dir:a.date<b.date?-dir:0):(a[sf]-b[sf])*dir);
+  return arr;
+}
+function renderCollabPosts(){
+  const arr=cpFiltered();
+  const pages=Math.max(1,Math.ceil(arr.length/CPPER));
+  if(CPPAGE>pages)CPPAGE=pages;
+  const start=(CPPAGE-1)*CPPER, slice=arr.slice(start,start+CPPER);
+  const tb=document.querySelector('#cpTable tbody'); tb.innerHTML='';
+  slice.forEach((p,i)=>{const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${start+i+1}</td><td style="white-space:nowrap">${p.date||''}</td>
+      <td>${esc(p.collaboration)}</td><td>${esc(p.tutor)}</td><td>${esc(p.profile)}</td>
+      <td class="num">${(p.engagement||0).toLocaleString()}</td><td class="num">${(p.impressions||0).toLocaleString()}</td>
+      <td class="num">${(p.reachPerPost||0).toLocaleString()}</td><td class="num">${(p.rate||0).toFixed(2)}%</td>
+      <td class="msg">${esc(p.message)}</td><td>${p.link?`<a href="${p.link}" target="_blank">เปิด ↗</a>`:''}</td>`;
+    tb.appendChild(tr);});
+  document.getElementById('cpInfo').textContent=`${arr.length?start+1:0}-${Math.min(start+CPPER,arr.length)} จาก ${arr.length} โพสต์ · หน้า ${CPPAGE}/${pages}`;
+  document.getElementById('cpPrev').disabled=CPPAGE<=1;
+  document.getElementById('cpNext').disabled=CPPAGE>=pages;
+}
 function fmtU(s){const m=(s||'').match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);if(!m)return s||'-';
   const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]));
   return d.toLocaleString('th-TH',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})+' น.';}
@@ -194,8 +246,9 @@ function loadData(fresh){
     setSub();
     if(!document.querySelector('#fMonth option[data-built]')){
       months().forEach(m=>document.getElementById('fMonth').innerHTML+=`<option data-built="1">${m}</option>`);
+      [...new Set((DATA.collabPosts||[]).map(p=>p.collaboration).filter(Boolean))].forEach(cl=>document.getElementById('cpCollab').innerHTML+=`<option>${cl}</option>`);
     }
-    render();
+    render(); renderCollabPosts();
   }).catch(e=>{document.getElementById('sub').textContent='โหลดข้อมูลไม่สำเร็จ';console.error(e);})
    .finally(()=>{if(btn){btn.disabled=false;btn.textContent='🔄 รีเฟรชข้อมูล';}});
 }
@@ -203,6 +256,9 @@ loadData(false).then(()=>{
   document.getElementById('foot').textContent='ข้อมูล IG Collab Post ดึงสดจาก Google Sheet';
   if(!(DATA.collab||[]).length) document.getElementById('sub').textContent='ยังไม่มีข้อมูล Collab — ตรวจสิทธิ์ชีต/แท็บ';
   ['fMonth','trendMetric'].forEach(id=>document.getElementById(id).onchange=render);
+  ['cpCollab','cpFrom','cpTo','cpSort','cpDir'].forEach(id=>document.getElementById(id).onchange=()=>{CPPAGE=1;renderCollabPosts();});
+  document.getElementById('cpPrev').onclick=()=>{if(CPPAGE>1){CPPAGE--;renderCollabPosts();}};
+  document.getElementById('cpNext').onclick=()=>{CPPAGE++;renderCollabPosts();};
   document.getElementById('refresh').onclick=()=>loadData(true);
   document.querySelectorAll('#tbl th.sortable').forEach(th=>th.onclick=()=>{
     const s=th.dataset.s; if(sortKey===s)sortDir=-sortDir; else{sortKey=s;sortDir=s==='tutor'?1:-1;} render();});

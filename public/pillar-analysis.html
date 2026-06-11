@@ -42,6 +42,10 @@
   .card h3{margin:0 0 12px;font-size:15px;font-weight:600}
   .full{grid-column:1 / -1}
   canvas{max-height:320px}
+  .htmlLegend{display:flex;flex-wrap:wrap;justify-content:center;gap:9px 18px;margin:2px 0 12px;padding:0 8px}
+  .htmlLegend .lg-it{display:inline-flex;align-items:center;gap:7px;color:#fff;font-size:13px;cursor:pointer;user-select:none}
+  .htmlLegend .lg-it.off{opacity:.4;text-decoration:line-through}
+  .htmlLegend .lg-sw{width:14px;height:14px;border-radius:3px;flex:none}
   .tbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
   .tbar .left{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   table{width:100%;border-collapse:collapse;font-size:13px}
@@ -98,7 +102,7 @@
     <div class="card" style="margin:0"><h3>Engagement Rate ตาม Pillar</h3><canvas id="cRate"></canvas></div>
     <div class="card" style="margin:0"><h3>Engagement ต่อโพสต์ (ประสิทธิภาพ)</h3><canvas id="cEpp"></canvas></div>
     <div class="card" style="margin:0"><h3>จำนวนโพสต์ตาม Pillar</h3><canvas id="cPosts"></canvas></div>
-    <div class="card full" style="margin:0"><h3>Engagement ตาม Pillar × แพลตฟอร์ม (stacked)</h3><canvas id="cStack" style="max-height:380px"></canvas></div>
+    <div class="card full" style="margin:0"><h3>Engagement ตาม Pillar × แพลตฟอร์ม (stacked)</h3><div id="stackLegend" class="htmlLegend"></div><canvas id="cStack" style="max-height:380px"></canvas></div>
   </div>
 
   <div class="card">
@@ -180,6 +184,15 @@ function platFill(plat,c,horizontal){
 }
 const fmt=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':Math.round(n).toLocaleString();
 const pct=n=>(n*100).toFixed(2)+'%';
+function buildHtmlLegend(elId,chart,items){
+  const el=document.getElementById(elId); if(!el)return;
+  el.innerHTML='';
+  items.forEach(it=>{const sp=document.createElement('span');sp.className='lg-it';
+    const br=it.color==='#000000'?';border:1px solid #4a4f5b':'';
+    sp.innerHTML='<span class="lg-sw" style="background:'+it.color+br+'"></span>'+it.label;
+    sp.onclick=()=>{const ix=[];chart.data.datasets.forEach((d,i)=>{if(d.label===it.label)ix.push(i);});if(!ix.length)return;const nv=!chart.isDatasetVisible(ix[0]);ix.forEach(i=>chart.setDatasetVisibility(i,nv));sp.classList.toggle('off',!nv);chart.update();};
+    el.appendChild(sp);});
+}
 const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const contrast=h=>{const c=(h||'').replace('#','').slice(0,6);const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return (0.299*r+0.587*g+0.114*b)/255>0.6?'#11151c':'#fff';};
 function deltaHTML(cur,prev){if(!prev)return '';const d=(cur-prev)/prev*100,up=d>=0;return `<span class="dlt ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(d).toFixed(1)}%</span>`;}
@@ -257,10 +270,10 @@ function renderCharts(){
   charts.cStack=new Chart(document.getElementById('cStack'),{type:'bar',
     data:{labels:pilNames,datasets:ds},
     options:{responsive:true,scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:fmt}}},
-      plugins:{legend:{position:'top',labels:{generateLabels:ch=>nets.map((n,i)=>({text:n,fillStyle:PLAT_COLORS[n]||'#888',strokeStyle:PLAT_COLORS[n]||'#888',hidden:!ch.isDatasetVisible(i),datasetIndex:i})),filter:(it)=>!B||(ds[it.datasetIndex]&&ds[it.datasetIndex].stack==='p')},
-        onClick:(e,item,legend)=>{const ch=legend.chart,lb=item.text,vis=ch.isDatasetVisible(item.datasetIndex);ch.data.datasets.forEach((d,i)=>{if(d.label===lb)ch.setDatasetVisibility(i,!vis);});ch.update();}},
+      plugins:{legend:{display:false},
         datalabels:{display:'auto',clamp:true,color:c=>contrast(PLAT_COLORS[c.dataset.label]||'#888'),anchor:'center',align:'center',font:{weight:'700',size:9},formatter:x=>x>0?fmt(x):''},
         tooltip:{callbacks:{label:c=>`${c.dataset.label} (${c.dataset.stack==='c'?labB:labA}): ${fmt(c.parsed.y)}`}}}}});
+  buildHtmlLegend('stackLegend',charts.cStack,nets.map(n=>({label:n,color:PLAT_COLORS[n]||'#888'})));
 
   renderPillarTable(pilA,cmpMap,labA,labB);
 }

@@ -38,6 +38,10 @@
   .tbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
   .tbar .left{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   canvas{max-height:320px}
+  .htmlLegend{display:flex;flex-wrap:wrap;justify-content:center;gap:9px 18px;margin:2px 0 12px;padding:0 8px}
+  .htmlLegend .lg-it{display:inline-flex;align-items:center;gap:7px;color:#fff;font-size:13px;cursor:pointer;user-select:none}
+  .htmlLegend .lg-it.off{opacity:.4;text-decoration:line-through}
+  .htmlLegend .lg-sw{width:14px;height:14px;border-radius:3px;flex:none}
   .cscroll{overflow-x:auto;overflow-y:hidden}
   .cbox{min-width:100%;height:300px;position:relative}
   .cbox canvas{max-height:none!important}
@@ -110,6 +114,7 @@
         <option value="engagement">Engagement</option><option value="idx">📈 % เติบโต (ดัชนีฐาน 100)</option></select></div>
     </div>
     <div class="chips" id="trendChips"></div>
+    <div id="trendLegend" class="htmlLegend"></div>
     <canvas id="cTrend" style="max-height:340px"></canvas>
   </div>
 
@@ -122,6 +127,7 @@
           <option value="follower">ยอด Follower</option><option value="followerGrowth">Follower Growth</option><option value="idx">📈 % เติบโต (ดัชนีฐาน 100)</option></select>
       </div>
     </div>
+    <div id="channelLegend" class="htmlLegend"></div>
     <canvas id="cChannel" style="max-height:360px"></canvas>
   </div>
 
@@ -180,6 +186,15 @@ function platFill(plat,c,horizontal){
 }
 const PALETTE=['#5b8cff','#E4405F','#f5a524','#9b8cff','#25F4EE','#ff7a59','#7ee787'];
 const ME="P'Pan";
+function buildHtmlLegend(elId,chart,items){
+  const el=document.getElementById(elId); if(!el)return;
+  el.innerHTML='';
+  items.forEach(it=>{const sp=document.createElement('span');sp.className='lg-it';
+    const br=it.color==='#000000'?';border:1px solid #4a4f5b':'';
+    sp.innerHTML='<span class="lg-sw" style="background:'+it.color+br+'"></span>'+it.label;
+    sp.onclick=()=>{const ix=[];chart.data.datasets.forEach((d,i)=>{if(d.label===it.label)ix.push(i);});if(!ix.length)return;const nv=!chart.isDatasetVisible(ix[0]);ix.forEach(i=>chart.setDatasetVisibility(i,nv));sp.classList.toggle('off',!nv);chart.update();};
+    el.appendChild(sp);});
+}
 const fmt=n=>Math.abs(n)>=1e6?(n/1e6).toFixed(2)+'M':Math.abs(n)>=1e3?(n/1e3).toFixed(1)+'K':Math.round(n).toLocaleString();
 const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const v=id=>document.getElementById(id).value;
@@ -277,9 +292,10 @@ function renderTrend(){
   charts.cTrend=new Chart(document.getElementById('cTrend'),{type:'bar',data:{labels:ms,datasets},
     options:{responsive:true,interaction:{mode:'index',intersect:false},layout:{padding:{top:42}},
       scales:{y:{suggestedMax:mx*1.22,ticks:{callback:yf}}},
-      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#ffffff'}},
+      plugins:{legend:{display:false},
         tooltip:{callbacks:{label:c=>c.dataset.label+': '+yf(c.parsed.y)}},
         datalabels:{display:c=>c.dataset.type!=='line',clamp:true,color:'#cdd6e6',anchor:'end',align:'top',rotation:-90,font:{weight:'600',size:9},formatter:x=>x>0?yf(x):''}}}});
+  buildHtmlLegend('trendLegend',charts.cTrend,series.map(o=>({label:o.t,color:tutorColor(o.t)})).concat([{label:'เฉลี่ย (แนวโน้ม)',color:'#ffd166'}]));
 }
 function renderChannel(){
   const tutor=v('chTutor'),sel=v('chMetric'),ms=months();
@@ -300,9 +316,10 @@ function renderChannel(){
   charts.cChannel=new Chart(document.getElementById('cChannel'),{type:'bar',data:{labels:ms,datasets},
     options:{responsive:true,interaction:{mode:'index',intersect:false},layout:{padding:{top:42}},
       scales:{y:{suggestedMax:mx*1.22,ticks:{callback:yf}}},
-      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#ffffff',generateLabels:ch=>ch.data.datasets.map((d,i)=>({text:d.label,fillStyle:d.type==='line'?d.borderColor:(PLAT_COLORS[d.label]||'#888'),strokeStyle:d.type==='line'?d.borderColor:(PLAT_COLORS[d.label]||'#888'),pointStyle:d.type==='line'?'line':'rectRounded',hidden:!ch.isDatasetVisible(i),datasetIndex:i}))}},
+      plugins:{legend:{display:false},
         tooltip:{callbacks:{label:c=>c.dataset.label+': '+yf(c.parsed.y)}},
         datalabels:{display:c=>c.dataset.type!=='line',clamp:true,color:'#cdd6e6',anchor:'end',align:'top',rotation:-90,font:{weight:'600',size:9},formatter:x=>x>0?yf(x):''}}}});
+  buildHtmlLegend('channelLegend',charts.cChannel,nets.map(n=>({label:n,color:PLAT_COLORS[n]||'#888'})).concat([{label:'เฉลี่ย (แนวโน้ม)',color:'#ffd166'}]));
 }
 function renderTable(agg){
   const arr=agg.slice().sort((a,b)=> sortKey==='tutor'?(a.tutor>b.tutor?sortDir:a.tutor<b.tutor?-sortDir:0):(a[sortKey]-b[sortKey])*sortDir);

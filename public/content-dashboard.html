@@ -86,7 +86,17 @@
 </div>
 
 <script>
-const PLAT_COLORS={Facebook:'#1877F2',Instagram:'#E4405F',TikTok:'#25F4EE',X:'#E7E9EA',YouTube:'#FF0000'};
+const PLAT_COLORS={Facebook:'#1877F2',Instagram:'#C13584',TikTok:'#25F4EE',X:'#E7E9EA',YouTube:'#FF0000'};
+// ไล่ระดับสีตาม CI: IG (ม่วง→ชมพู→ส้มแดง), TikTok (ฟ้านีออน→ชมพูนีออน)
+const PLAT_GRAD={Instagram:['#833AB4','#C13584','#FD1D1D'],TikTok:['#00F2FE','#25F4EE','#FE0979']};
+function platFill(plat,c,horizontal){
+  const stops=PLAT_GRAD[plat], area=c.chart.chartArea;
+  if(!stops||!area) return PLAT_COLORS[plat]||'#5b8cff';
+  const g=horizontal?c.chart.ctx.createLinearGradient(area.left,0,area.right,0)
+                     :c.chart.ctx.createLinearGradient(area.left,area.top,area.right,area.bottom);
+  stops.forEach((col,i)=>g.addColorStop(i/(stops.length-1),col));
+  return g;
+}
 const contrast=h=>{const c=(h||'').replace('#','');const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return (0.299*r+0.587*g+0.114*b)/255>0.6?'#11151c':'#fff';};
 const fmt=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':Math.round(n).toLocaleString();
 const pct=n=>(n*100).toFixed(2)+'%';
@@ -138,7 +148,7 @@ function render(){
   const platLabels=Object.keys(byPlat).sort((a,b)=>byPlat[b].impressions-byPlat[a].impressions);
   makeChart('cImpPlat','bar',platLabels,null,
     {legend:grouped,
-     datasets:[{data:platLabels.map(p=>byPlat[p].impressions),backgroundColor:platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff'),borderRadius:6,label:labP}]
+     datasets:[{data:platLabels.map(p=>byPlat[p].impressions),backgroundColor:c=>platFill(platLabels[c.dataIndex],c,true),borderRadius:6,label:labP}]
        .concat(cmp?[{data:platLabels.map(p=>cByPlat[p]?cByPlat[p].impressions:0),backgroundColor:CMPCLR,borderRadius:6,label:labC}]:[]),
      options:{indexAxis:'y',layout:{padding:{right:54}},scales:{x:{ticks:{callback:fmt},suggestedMax:sM(platLabels.map(p=>Math.max(byPlat[p].impressions,cByPlat&&cByPlat[p]?cByPlat[p].impressions:0)))}},
        plugins:{legend:{display:grouped,labels:{boxWidth:12}},datalabels:dl('#cdd6e6','right')}}});
@@ -146,11 +156,11 @@ function render(){
   const postCols=platLabels.map(p=>PLAT_COLORS[p]||'#5b8cff');
   makeChart('cPostsPlat','doughnut',platLabels,null,
     {legend:true,
-     datasets:[{data:platLabels.map(p=>byPlat[p].posts),backgroundColor:postCols,label:labP}]
+     datasets:[{data:platLabels.map(p=>byPlat[p].posts),backgroundColor:c=>platFill(platLabels[c.dataIndex],c,false),label:labP}]
        .concat(cmp?[{data:platLabels.map(p=>cByPlat[p]?cByPlat[p].posts:0),backgroundColor:postCols.map(c=>c+'66'),label:labC,weight:0.5}]:[]),
-     options:{layout:{padding:{top:34,bottom:34,left:10,right:10}},plugins:{legend:{position:'right'},
+     options:{layout:{padding:{top:34,bottom:34,left:10,right:10}},plugins:{legend:{position:'right',labels:{generateLabels:ch=>ch.data.labels.map((l,i)=>({text:l,fillStyle:PLAT_COLORS[l]||'#5b8cff',strokeStyle:PLAT_COLORS[l]||'#5b8cff',index:i}))}},
        datalabels:{clamp:true,clip:false,
-         color:c=>{const t=c.dataset.data.reduce((s,x)=>s+(x||0),0),p=t?(c.dataset.data[c.dataIndex]||0)/t:0;return p<0.05?'#e7eaf0':contrast((c.dataset.backgroundColor[c.dataIndex]||'#888888').slice(0,7));},
+         color:c=>{const t=c.dataset.data.reduce((s,x)=>s+(x||0),0),p=t?(c.dataset.data[c.dataIndex]||0)/t:0;if(p<0.05)return '#e7eaf0';return contrast(PLAT_COLORS[platLabels[c.dataIndex]]||'#888888');},
          anchor:c=>{const t=c.dataset.data.reduce((s,x)=>s+(x||0),0),p=t?(c.dataset.data[c.dataIndex]||0)/t:0;return p<0.05?'end':'center';},
          align:c=>{const t=c.dataset.data.reduce((s,x)=>s+(x||0),0),p=t?(c.dataset.data[c.dataIndex]||0)/t:0;return p<0.05?'end':'center';},
          offset:c=>{const t=c.dataset.data.reduce((s,x)=>s+(x||0),0),p=t?(c.dataset.data[c.dataIndex]||0)/t:0;return p<0.05?4:0;},

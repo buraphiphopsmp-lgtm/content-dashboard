@@ -122,6 +122,7 @@
         <th class="num sortable" data-s="engagement">Engagement ⇅</th>
         <th class="num sortable" data-s="rate">Eng Rate ⇅</th>
         <th class="num sortable" data-s="epp">Eng/Post ⇅</th>
+        <th class="num">Δ โพสต์</th>
         <th class="num">Δ Imp</th>
         <th class="num">Δ Eng</th>
       </tr></thead>
@@ -270,6 +271,7 @@ function renderPillarTable(pil,cmp,labA,labB){
       <td class="num">${p.engagement.toLocaleString()}${sub(c?c.engagement.toLocaleString():'—')}</td>
       <td class="num">${pct(p.rate)}${sub(c?pct(c.rate):'—')}</td>
       <td class="num">${Math.round(p.epp).toLocaleString()}${sub(c?Math.round(c.epp).toLocaleString():'—')}</td>
+      <td class="num">${has&&c&&c.posts>0?deltaHTML(p.posts,c.posts):'—'}</td>
       <td class="num">${has&&c&&c.impressions>0?deltaHTML(p.impressions,c.impressions):'—'}</td>
       <td class="num">${has&&c&&c.engagement>0?deltaHTML(p.engagement,c.engagement):'—'}</td>`;
     tb.appendChild(tr);});

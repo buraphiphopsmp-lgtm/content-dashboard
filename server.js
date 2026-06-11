@@ -15,7 +15,7 @@ const GID_TCONTENT = '1543994548'; // แท็บ "Raw data Top content (incl. 
 const GID_COLLAB   = '1620780602'; // แท็บ "Raw Data Tutor Overview (IG Collab Post)" (สรุป IG collab รายเดือน)
 const GID_COLLABPOSTS = '1522627842'; // แท็บ "Raw data Post with Tutor Account (IG Collab)" (post-level)
 const CACHE_MS = 2 * 60 * 1000;    // cache 2 นาที
-const csvUrl = (gid) => `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
+const csvUrl = (gid, q) => `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv${q ? '&tq=' + encodeURIComponent('select ' + q) : ''}&gid=${gid}`;
 
 let CACHE = { ts: 0, data: null };
 
@@ -49,8 +49,8 @@ function toISO(d) {
 const NET = { FACEBOOK:'Facebook', INSTAGRAM:'Instagram', TIKTOK:'TikTok', TWITTER:'X', X:'X', YOUTUBE:'YouTube' };
 const normNet = (n) => NET[clean(n).toUpperCase()] || clean(n);
 
-async function fetchCsv(gid) {
-  const res = await fetch(csvUrl(gid));
+async function fetchCsv(gid, q) {
+  const res = await fetch(csvUrl(gid, q));
   const text = await res.text();
   if (text.trim().startsWith('<') || text.includes('<!DOCTYPE'))
     throw new Error('sheet not public or gid wrong (got HTML)');
@@ -154,8 +154,8 @@ function buildCollabPosts(rows) {
   }).filter(x => x.tutor || x.collaboration);
 }
 
-async function getData(force) {
-  if (!force && CACHE.data && Date.now() - CACHE.ts < CACHE_MS) return CACHE.data;
+let REFRESHING = null;
+async function buildAll() {
   const [sumR, postR, tutR, tcR, colR, colpR] = await Promise.all([
     fetchCsv(GID_SUMMARY), fetchCsv(GID_POSTS),
     fetchCsv(GID_TUTOR).catch(() => null), fetchCsv(GID_TCONTENT).catch(() => null),
@@ -175,14 +175,22 @@ async function getData(force) {
     rows: summary.length, postsAnalyzed: posts.length }, summary, posts, tutors, tutorPosts, collab, collabPosts };
   const json = JSON.stringify(data);
   CACHE = { ts: Date.now(), data, json, gz: zlib.gzipSync(json) };
-  return data;
+}
+// coalesce concurrent refreshes into one in-flight fetch
+function doRefresh() {
+  if (!REFRESHING) REFRESHING = buildAll().catch(e => console.error('refresh failed:', e.message)).finally(() => { REFRESHING = null; });
+  return REFRESHING;
 }
 
 // ---- routes ----
 app.get('/content-data.json', async (req, res) => {
   res.set('Cache-Control', 'no-cache');
-  try { await getData(req.query.fresh === '1'); }
-  catch (e) { if (!CACHE.data) return res.status(502).json({ error: String(e.message || e), meta: {}, summary: [], posts: [] }); }
+  if (!CACHE.data) {
+    await doRefresh();                                   // first ever: must wait
+    if (!CACHE.data) return res.status(502).json({ error: 'data unavailable', meta: {}, summary: [], posts: [] });
+  } else if (req.query.fresh === '1' || Date.now() - CACHE.ts >= CACHE_MS) {
+    doRefresh();                                         // refresh/stale: update in background, serve cache now
+  }
   res.type('application/json');
   if ((req.headers['accept-encoding'] || '').includes('gzip') && CACHE.gz) {
     res.set('Content-Encoding', 'gzip'); res.set('Vary', 'Accept-Encoding');
@@ -200,3 +208,6 @@ app.get('/', (req, res) => res.sendFile(path.join(PUBLIC, 'content-dashboard.htm
 app.get('/healthz', (req, res) => res.status(200).send('ok'));
 
 app.listen(PORT, '0.0.0.0', () => console.log('Content Performance Dashboard (live sheet) on port ' + PORT));
+
+doRefresh();                                  // warm cache on startup
+setInterval(() => doRefresh(), CACHE_MS);     // keep cache fresh in background (every 2 นาที)

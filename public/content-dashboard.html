@@ -148,12 +148,12 @@ function render(){
     {legend:true,
      datasets:[{data:platLabels.map(p=>byPlat[p].posts),backgroundColor:postCols,label:labP}]
        .concat(cmp?[{data:platLabels.map(p=>cByPlat[p]?cByPlat[p].posts:0),backgroundColor:postCols.map(c=>c+'66'),label:labC,weight:0.5}]:[]),
-     options:{layout:{padding:{top:18,bottom:18,left:6,right:6}},plugins:{legend:{position:'right'},
-       datalabels:{clamp:true,
+     options:{layout:{padding:{top:34,bottom:34,left:10,right:10}},plugins:{legend:{position:'right'},
+       datalabels:{clamp:true,clip:false,
          color:c=>{const t=c.dataset.data.reduce((s,x)=>s+(x||0),0),p=t?(c.dataset.data[c.dataIndex]||0)/t:0;return p<0.05?'#e7eaf0':contrast((c.dataset.backgroundColor[c.dataIndex]||'#888888').slice(0,7));},
          anchor:c=>{const t=c.dataset.data.reduce((s,x)=>s+(x||0),0),p=t?(c.dataset.data[c.dataIndex]||0)/t:0;return p<0.05?'end':'center';},
          align:c=>{const t=c.dataset.data.reduce((s,x)=>s+(x||0),0),p=t?(c.dataset.data[c.dataIndex]||0)/t:0;return p<0.05?'end':'center';},
-         offset:c=>{const t=c.dataset.data.reduce((s,x)=>s+(x||0),0),p=t?(c.dataset.data[c.dataIndex]||0)/t:0;return p<0.05?8:0;},
+         offset:c=>{const t=c.dataset.data.reduce((s,x)=>s+(x||0),0),p=t?(c.dataset.data[c.dataIndex]||0)/t:0;return p<0.05?4:0;},
          font:{weight:'700',size:10},formatter:(v,c)=>{if(c.datasetIndex!==0||!v)return '';const t=c.dataset.data.reduce((s,x)=>s+(x||0),0);return t?Math.round(v/t*100)+'% ('+v.toLocaleString()+')':'';}},
        tooltip:{callbacks:{label:c=>{const t=c.dataset.data.reduce((s,x)=>s+(x||0),0);return `${c.label} (${c.datasetIndex===0?labP:labC}): ${t?Math.round(c.parsed/t*100):0}% (${c.parsed.toLocaleString()})`;}}}}}});
 

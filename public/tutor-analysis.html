@@ -42,6 +42,13 @@
   td.num,th.num{text-align:right;white-space:nowrap}
   .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
   .me{color:var(--accent2);font-weight:700}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+  .msg{color:var(--muted);max-width:340px}
+  a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+  .pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:14px;color:var(--muted)}
+  .pager button{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px}
+  .pager button:disabled{opacity:.4;cursor:default}
+  input[type=date]{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit}
   .up{color:#2ecc71}.down{color:#ff6b6b}
   .foot{color:var(--muted);font-size:12px;margin:18px 0;text-align:center}
   @media(max-width:880px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
@@ -119,6 +126,27 @@
       <tbody></tbody>
     </table>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="tbar">
+      <h3 style="margin:0">🏆 Top Content (รายโพสต์ · incl. Tutor)</h3>
+      <div class="left">
+        <label class="fl">ติวเตอร์</label><select id="tpTutor"><option value="">ทั้งหมด</option></select>
+        <label class="fl" style="margin-left:6px">ช่องทาง</label><select id="tpNet"><option value="">ทั้งหมด</option></select>
+        <label class="fl" style="margin-left:6px">วันที่</label><input type="date" id="tpFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="tpTo">
+        <label class="fl" style="margin-left:6px">เรียงตาม</label>
+        <select id="tpSort"><option value="engagement">Engagement</option><option value="impressions">Impressions</option><option value="reachPerPost">Reach/post</option><option value="date">วันที่</option></select>
+        <select id="tpDir"><option value="desc">มาก → น้อย</option><option value="asc">น้อย → มาก</option></select>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+    <table id="tpTable"><thead><tr>
+      <th>#</th><th>วันที่</th><th>Tutor</th><th>Network</th><th>Profile</th>
+      <th class="num">Engagement</th><th class="num">Impressions</th><th class="num">Reach/post</th><th>Message</th><th>Link</th>
+    </tr></thead><tbody></tbody></table>
+    </div>
+    <div class="pager"><span id="tpInfo"></span><button id="tpPrev">‹ ก่อนหน้า</button><button id="tpNext">ถัดไป ›</button></div>
   </div>
 
   <div class="foot" id="foot"></div>
@@ -211,6 +239,32 @@ function renderTable(agg){
     tb.appendChild(tr);});
 }
 
+let TPPAGE=1; const TPPER=20;
+function tpFiltered(){
+  const tu=v('tpTutor'),nw=v('tpNet'),f=v('tpFrom'),t=v('tpTo');
+  let arr=(DATA.tutorPosts||[]).filter(p=>(!tu||p.tutor===tu)&&(!nw||p.network===nw)&&(!f||(p.date||'')>=f)&&(!t||(p.date||'')<=t));
+  const sf=v('tpSort'),dir=v('tpDir')==='asc'?1:-1;
+  arr.sort((a,b)=> sf==='date'?(a.date>b.date?dir:a.date<b.date?-dir:0):(a[sf]-b[sf])*dir);
+  return arr;
+}
+function renderTopContent(){
+  const arr=tpFiltered();
+  const pages=Math.max(1,Math.ceil(arr.length/TPPER));
+  if(TPPAGE>pages)TPPAGE=pages;
+  const start=(TPPAGE-1)*TPPER, slice=arr.slice(start,start+TPPER);
+  const tb=document.querySelector('#tpTable tbody'); tb.innerHTML='';
+  slice.forEach((p,i)=>{const col=PLAT_COLORS[p.network]||'#9aa3b2';const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${start+i+1}</td><td style="white-space:nowrap">${p.date||''}</td>
+      <td><span${p.tutor===ME?' class="me"':''}>${esc(p.tutor)}</span></td>
+      <td><span class="badge" style="background:${col}22;color:${col}">${esc(p.network)}</span></td>
+      <td>${esc(p.profile)}</td><td class="num">${(p.engagement||0).toLocaleString()}</td>
+      <td class="num">${(p.impressions||0).toLocaleString()}</td><td class="num">${(p.reachPerPost||0).toLocaleString()}</td>
+      <td class="msg">${esc(p.message)}</td><td>${p.link?`<a href="${p.link}" target="_blank">เปิด ↗</a>`:''}</td>`;
+    tb.appendChild(tr);});
+  document.getElementById('tpInfo').textContent=`${arr.length?start+1:0}-${Math.min(start+TPPER,arr.length)} จาก ${arr.length} โพสต์ · หน้า ${TPPAGE}/${pages}`;
+  document.getElementById('tpPrev').disabled=TPPAGE<=1;
+  document.getElementById('tpNext').disabled=TPPAGE>=pages;
+}
 function fmtU(s){const m=(s||'').match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);if(!m)return s||'-';
   const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]));
   return d.toLocaleString('th-TH',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})+' น.';}
@@ -231,8 +285,10 @@ function loadData(fresh){
       document.getElementById('fMonth').value=ms[ms.length-1]||'';
       [...new Set((DATA.tutors||[]).map(r=>r.network))].forEach(n=>document.getElementById('fNetwork').innerHTML+=`<option>${n}</option>`);
       tutors.sort((a,b)=>a===ME?-1:b===ME?1:0).forEach(t=>document.getElementById('chTutor').innerHTML+=`<option>${t}</option>`);
+      [...new Set((DATA.tutorPosts||[]).map(p=>p.tutor))].forEach(t=>document.getElementById('tpTutor').innerHTML+=`<option>${t}</option>`);
+      [...new Set((DATA.tutorPosts||[]).map(p=>p.network))].forEach(n=>document.getElementById('tpNet').innerHTML+=`<option>${n}</option>`);
     }
-    render(); renderChannel();
+    render(); renderChannel(); renderTopContent();
   }).catch(e=>{document.getElementById('sub').textContent='โหลดข้อมูลไม่สำเร็จ';console.error(e);})
    .finally(()=>{if(btn){btn.disabled=false;btn.textContent='🔄 รีเฟรชข้อมูล';}});
 }
@@ -242,6 +298,9 @@ loadData(false).then(()=>{
   ['fMonth','fNetwork','trendMetric'].forEach(id=>document.getElementById(id).onchange=render);
   ['chTutor','chMetric'].forEach(id=>document.getElementById(id).onchange=renderChannel);
   document.getElementById('trendMetric').onchange=()=>{render();};
+  ['tpTutor','tpNet','tpFrom','tpTo','tpSort','tpDir'].forEach(id=>document.getElementById(id).onchange=()=>{TPPAGE=1;renderTopContent();});
+  document.getElementById('tpPrev').onclick=()=>{if(TPPAGE>1){TPPAGE--;renderTopContent();}};
+  document.getElementById('tpNext').onclick=()=>{TPPAGE++;renderTopContent();};
   document.getElementById('refresh').onclick=()=>loadData(true);
   document.querySelectorAll('#tbl th.sortable').forEach(th=>th.onclick=()=>{
     const s=th.dataset.s; if(sortKey===s)sortDir=-sortDir; else{sortKey=s;sortDir=s==='tutor'?1:-1;} render();});

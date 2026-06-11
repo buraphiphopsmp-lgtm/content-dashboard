@@ -71,8 +71,6 @@
     <div class="filters">
       <span><label class="fl">เดือน</label><select id="fMonth"><option value="">ทั้งหมด (รวม)</option></select></span>
       <span><label class="fl">เทียบกับ</label><select id="fCompare"><option value="">—</option></select></span>
-      <span><label class="fl">เทรนด์แสดง</label><select id="trendMetric">
-        <option value="engagement">Engagement</option><option value="impressions">Impressions</option><option value="posts">จำนวนโพสต์</option><option value="reachPerPost">Reach/post</option></select></span>
       <button id="refresh" class="btn">🔄 รีเฟรชข้อมูล</button>
       <span id="lastUpdate" class="upd"></span>
     </div>
@@ -92,7 +90,14 @@
     <div class="card" style="margin:0"><h3>Engagement ต่อโพสต์ ตาม Tutor</h3><div class="cscroll"><div class="cbox"><canvas id="cEpp"></canvas></div></div></div>
   </div>
 
-  <div class="card"><h3>📈 แนวโน้มรายเดือน — เทียบ Collab รายติวเตอร์</h3><canvas id="cTrend" style="max-height:340px"></canvas></div>
+  <div class="card">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <h3 style="margin:0">📈 แนวโน้มรายเดือน — เทียบ Collab รายติวเตอร์</h3>
+      <span><label class="fl">แสดง</label><select id="trendMetric">
+        <option value="engagement">Engagement</option><option value="impressions">Impressions</option><option value="posts">จำนวนโพสต์</option><option value="reachPerPost">Reach/post</option><option value="idx">📈 % เติบโต (ดัชนีฐาน 100)</option></select></span>
+    </div>
+    <canvas id="cTrend" style="max-height:340px"></canvas>
+  </div>
 
   <div class="card">
     <h3>ตารางเปรียบเทียบ Collab ตาม Tutor</h3>
@@ -199,14 +204,18 @@ function render(){
   renderTrend(); renderTable(a);
 }
 function renderTrend(){
-  const mkey=v('trendMetric'),ms=months();
+  const sel=v('trendMetric'),ms=months();
+  const idx=sel==='idx', mkey=idx?'engagement':sel;
   const tutors=[...new Set((DATA.collab||[]).map(r=>r.tutor))];
-  const datasets=tutors.map(t=>({label:t,borderColor:tutorColor(t),backgroundColor:tutorColor(t),tension:.3,pointRadius:3,
-    data:ms.map(m=>{const r=(DATA.collab||[]).find(x=>x.tutor===t&&x.month===m);return r?r[mkey]:0;})}));
+  const datasets=tutors.map(t=>{
+    let s=ms.map(m=>{const r=(DATA.collab||[]).find(x=>x.tutor===t&&x.month===m);return r?(r[mkey]||0):0;});
+    if(idx){const base=s.find(x=>x>0)||1; s=s.map(x=>x?+(x/base*100).toFixed(1):null);}
+    return {label:t,borderColor:tutorColor(t),backgroundColor:tutorColor(t),tension:.3,pointRadius:3,data:s};
+  });
   if(charts.cTrend)charts.cTrend.destroy();
   charts.cTrend=new Chart(document.getElementById('cTrend'),{type:'line',data:{labels:ms,datasets},
-    options:{responsive:true,interaction:{mode:'index',intersect:false},scales:{y:{ticks:{callback:fmt}}},
-      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#e7eaf0'}},datalabels:{display:false}}}});
+    options:{responsive:true,interaction:{mode:'index',intersect:false},scales:{y:{ticks:{callback:idx?(x=>x+'%'):fmt}}},
+      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#e7eaf0'}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+(idx?c.parsed.y+'%':fmt(c.parsed.y))}},datalabels:{display:false}}}});
 }
 function renderTable(a){
   const arr=a.slice().sort((x,y)=> sortKey==='tutor'?(x.tutor>y.tutor?sortDir:x.tutor<y.tutor?-sortDir:0):(x[sortKey]-y[sortKey])*sortDir);

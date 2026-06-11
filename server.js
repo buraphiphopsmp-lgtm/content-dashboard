@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const zlib = require('zlib');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -155,35 +156,39 @@ function buildCollabPosts(rows) {
 
 async function getData(force) {
   if (!force && CACHE.data && Date.now() - CACHE.ts < CACHE_MS) return CACHE.data;
-  const [sumRows, postRows] = await Promise.all([fetchCsv(GID_SUMMARY), fetchCsv(GID_POSTS)]);
-  const summary = buildSummary(sumRows);
-  const posts = buildPosts(postRows);
-  let tutors = [];
-  try { tutors = buildTutors(await fetchCsv(GID_TUTOR)); } catch (e) { /* tutor tab optional */ }
-  let tutorPosts = [];
-  try { tutorPosts = buildTutorPosts(await fetchCsv(GID_TCONTENT)); } catch (e) { /* optional */ }
-  let collab = [];
-  try { collab = buildCollab(await fetchCsv(GID_COLLAB)); } catch (e) { /* optional */ }
-  let collabPosts = [];
-  try { collabPosts = buildCollabPosts(await fetchCsv(GID_COLLABPOSTS)); } catch (e) { /* optional */ }
+  const [sumR, postR, tutR, tcR, colR, colpR] = await Promise.all([
+    fetchCsv(GID_SUMMARY), fetchCsv(GID_POSTS),
+    fetchCsv(GID_TUTOR).catch(() => null), fetchCsv(GID_TCONTENT).catch(() => null),
+    fetchCsv(GID_COLLAB).catch(() => null), fetchCsv(GID_COLLABPOSTS).catch(() => null),
+  ]);
+  const summary = buildSummary(sumR);
+  const posts = buildPosts(postR);
+  let tutors = [], tutorPosts = [], collab = [], collabPosts = [];
+  try { if (tutR) tutors = buildTutors(tutR); } catch (e) {}
+  try { if (tcR) tutorPosts = buildTutorPosts(tcR); } catch (e) {}
+  try { if (colR) collab = buildCollab(colR); } catch (e) {}
+  try { if (colpR) collabPosts = buildCollabPosts(colpR); } catch (e) {}
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   const stamp = `${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())} UTC`;
   const data = { meta: { source: 'Raw data Pillar SMP', month: 'May 2026', generatedAt: stamp,
     rows: summary.length, postsAnalyzed: posts.length }, summary, posts, tutors, tutorPosts, collab, collabPosts };
-  CACHE = { ts: Date.now(), data };
+  const json = JSON.stringify(data);
+  CACHE = { ts: Date.now(), data, json, gz: zlib.gzipSync(json) };
   return data;
 }
 
 // ---- routes ----
 app.get('/content-data.json', async (req, res) => {
   res.set('Cache-Control', 'no-cache');
-  try {
-    res.json(await getData(req.query.fresh === '1'));
-  } catch (e) {
-    if (CACHE.data) return res.json(CACHE.data);            // serve stale on error
-    res.status(502).json({ error: String(e.message || e), meta: {}, summary: [], posts: [] });
+  try { await getData(req.query.fresh === '1'); }
+  catch (e) { if (!CACHE.data) return res.status(502).json({ error: String(e.message || e), meta: {}, summary: [], posts: [] }); }
+  res.type('application/json');
+  if ((req.headers['accept-encoding'] || '').includes('gzip') && CACHE.gz) {
+    res.set('Content-Encoding', 'gzip'); res.set('Vary', 'Accept-Encoding');
+    return res.end(CACHE.gz);
   }
+  res.end(CACHE.json || JSON.stringify(CACHE.data));
 });
 
 app.use((req, res, next) => {

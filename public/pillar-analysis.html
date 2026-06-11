@@ -97,6 +97,7 @@
     <div class="card" style="margin:0"><h3>Impressions ตาม Pillar</h3><canvas id="cImp"></canvas></div>
     <div class="card" style="margin:0"><h3>Engagement Rate ตาม Pillar</h3><canvas id="cRate"></canvas></div>
     <div class="card" style="margin:0"><h3>Engagement ต่อโพสต์ (ประสิทธิภาพ)</h3><canvas id="cEpp"></canvas></div>
+    <div class="card" style="margin:0"><h3>จำนวนโพสต์ตาม Pillar</h3><canvas id="cPosts"></canvas></div>
     <div class="card full" style="margin:0"><h3>Engagement ตาม Pillar × แพลตฟอร์ม (stacked)</h3><canvas id="cStack" style="max-height:380px"></canvas></div>
   </div>
 
@@ -243,6 +244,8 @@ function renderCharts(){
   bar('cRate',byRate.map(p=>p.pillar),byRate.map(p=>+(p.rate*100).toFixed(2)),'#f5a524',x=>x+'%',false,cv(byRate,'rate',100),labA,labB);
   const byEpp=pilA.slice().sort((a,b)=>b.epp-a.epp);
   bar('cEpp',byEpp.map(p=>p.pillar),byEpp.map(p=>Math.round(p.epp)),'#9b8cff',fmt,false,cv(byEpp,'epp'),labA,labB);
+  const byPosts=pilA.slice().sort((a,b)=>b.posts-a.posts);
+  bar('cPosts',byPosts.map(p=>p.pillar),byPosts.map(p=>p.posts),'#39bdff',v=>v.toLocaleString(),false,cv(byPosts,'posts'),labA,labB);
 
   // stacked: pillar x network
   const fp=platVal();

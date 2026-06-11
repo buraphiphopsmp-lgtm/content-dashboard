@@ -100,7 +100,7 @@
       <h3 style="margin:0">📈 การเติบโตของยอดฟอลโลเวอร์ — เทียบติวเตอร์</h3>
       <div class="left"><label class="fl">แสดง</label><select id="trendMetric">
         <option value="follower">ยอด Follower (สะสม)</option><option value="followerGrowth">Follower Growth (รายเดือน)</option>
-        <option value="engagement">Engagement</option></select></div>
+        <option value="engagement">Engagement</option><option value="idx">📈 % เติบโต (ดัชนีฐาน 100)</option></select></div>
     </div>
     <canvas id="cTrend" style="max-height:340px"></canvas>
   </div>
@@ -111,7 +111,7 @@
       <div class="left">
         <label class="fl">ติวเตอร์</label><select id="chTutor"></select>
         <label class="fl" style="margin-left:6px">แสดง</label><select id="chMetric">
-          <option value="follower">ยอด Follower</option><option value="followerGrowth">Follower Growth</option></select>
+          <option value="follower">ยอด Follower</option><option value="followerGrowth">Follower Growth</option><option value="idx">📈 % เติบโต (ดัชนีฐาน 100)</option></select>
       </div>
     </div>
     <canvas id="cChannel" style="max-height:360px"></canvas>
@@ -199,11 +199,12 @@ function bar(id,labels,data,colors,fmtFn,cmp,labA,labB){
       plugins:{legend:{display:hasC,labels:{boxWidth:12,color:'#e7eaf0'}},
         datalabels:{clamp:true,color:'#cdd6e6',anchor:x=>x.raw<0?'start':'end',align:x=>x.raw<0?'bottom':'top',rotation:hasC?-90:0,font:{weight:'600',size:hasC?9:11},formatter:x=>x!=0?fmtFn(x):''}}}});
 }
-function lineChart(id,labels,datasets){
+function lineChart(id,labels,datasets,yfmt){
   if(charts[id])charts[id].destroy();
   charts[id]=new Chart(document.getElementById(id),{type:'line',data:{labels,datasets},
-    options:{responsive:true,interaction:{mode:'index',intersect:false},scales:{y:{ticks:{callback:fmt}}},
-      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#e7eaf0'}},datalabels:{display:false}}}});
+    options:{responsive:true,interaction:{mode:'index',intersect:false},scales:{y:{ticks:{callback:yfmt||fmt}}},
+      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#e7eaf0'}},
+        tooltip:{callbacks:{label:c=>c.dataset.label+': '+((yfmt||fmt)(c.parsed.y))}},datalabels:{display:false}}}});
 }
 function rowsForMonth(fm){const fn=v('fNetwork');return (DATA.tutors||[]).filter(r=>r.month===fm&&(!fn||r.network===fn));}
 function scope(){const fm=v('fMonth'),fn=v('fNetwork');return (DATA.tutors||[]).filter(r=>(!fm||r.month===fm)&&(!fn||r.network===fn));}
@@ -234,19 +235,27 @@ function render(){
   renderTrend(); renderTable(agg);
 }
 function renderTrend(){
-  const mkey=v('trendMetric'),fn=v('fNetwork'),gk=v('groupBy')||'tutor',ms=months();
+  const sel=v('trendMetric'),fn=v('fNetwork'),gk=v('groupBy')||'tutor',ms=months();
+  const idx=sel==='idx', mkey=idx?'follower':sel;
   const tutors=[...new Set((DATA.tutors||[]).map(r=>r[gk]))];
-  const datasets=tutors.map(t=>({label:t,borderColor:tutorColor(t),backgroundColor:tutorColor(t),tension:.3,pointRadius:3,borderWidth:t===ME?3:1.5,
-    data:ms.map(m=>(DATA.tutors||[]).filter(r=>r[gk]===t&&r.month===m&&(!fn||r.network===fn)).reduce((s,r)=>s+(r[mkey]||0),0))}));
-  lineChart('cTrend',ms,datasets);
+  const datasets=tutors.map(t=>{
+    let s=ms.map(m=>(DATA.tutors||[]).filter(r=>r[gk]===t&&r.month===m&&(!fn||r.network===fn)).reduce((a,r)=>a+(r[mkey]||0),0));
+    if(idx){const base=s.find(x=>x>0)||1; s=s.map(x=>x?+(x/base*100).toFixed(1):null);}
+    return {label:t,borderColor:tutorColor(t),backgroundColor:tutorColor(t),tension:.3,pointRadius:3,borderWidth:t===ME?3:1.5,data:s};
+  });
+  lineChart('cTrend',ms,datasets, idx?(x=>x+'%'):fmt);
 }
 function renderChannel(){
-  const tutor=v('chTutor'),mkey=v('chMetric'),ms=months();
+  const tutor=v('chTutor'),sel=v('chMetric'),ms=months();
+  const idx=sel==='idx', mkey=idx?'follower':sel;
   const rows=(DATA.tutors||[]).filter(r=>r.tutor===tutor);
   const nets=[...new Set(rows.map(r=>r.network))];
-  const datasets=nets.map(n=>({label:n,borderColor:PLAT_COLORS[n]||'#888',backgroundColor:PLAT_COLORS[n]||'#888',tension:.3,pointRadius:3,
-    data:ms.map(m=>rows.filter(r=>r.network===n&&r.month===m).reduce((s,r)=>s+(r[mkey]||0),0))}));
-  lineChart('cChannel',ms,datasets);
+  const datasets=nets.map(n=>{
+    let s=ms.map(m=>rows.filter(r=>r.network===n&&r.month===m).reduce((a,r)=>a+(r[mkey]||0),0));
+    if(idx){const base=s.find(x=>x>0)||1; s=s.map(x=>x?+(x/base*100).toFixed(1):null);}
+    return {label:n,borderColor:PLAT_COLORS[n]||'#888',backgroundColor:PLAT_COLORS[n]||'#888',tension:.3,pointRadius:3,data:s};
+  });
+  lineChart('cChannel',ms,datasets, idx?(x=>x+'%'):fmt);
 }
 function renderTable(agg){
   const arr=agg.slice().sort((a,b)=> sortKey==='tutor'?(a.tutor>b.tutor?sortDir:a.tutor<b.tutor?-sortDir:0):(a[sortKey]-b[sortKey])*sortDir);

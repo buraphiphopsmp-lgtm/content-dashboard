@@ -238,12 +238,20 @@ function renderTrend(){
   const sel=v('trendMetric'),fn=v('fNetwork'),gk=v('groupBy')||'tutor',ms=months();
   const idx=sel==='idx', mkey=idx?'follower':sel;
   const tutors=[...new Set((DATA.tutors||[]).map(r=>r[gk]))];
-  const datasets=tutors.map(t=>{
+  const series=tutors.map(t=>{
     let s=ms.map(m=>(DATA.tutors||[]).filter(r=>r[gk]===t&&r.month===m&&(!fn||r.network===fn)).reduce((a,r)=>a+(r[mkey]||0),0));
     if(idx){const base=s.find(x=>x>0)||1; s=s.map(x=>x?+(x/base*100).toFixed(1):null);}
-    return {label:t,borderColor:tutorColor(t),backgroundColor:tutorColor(t),tension:.3,pointRadius:3,borderWidth:t===ME?3:1.5,data:s};
+    return {t,s};
   });
-  lineChart('cTrend',ms,datasets, idx?(x=>x+'%'):fmt);
+  const datasets=series.map(o=>({type:'bar',label:o.t,backgroundColor:tutorColor(o.t),borderRadius:4,data:o.s}));
+  const avg=ms.map((m,i)=>{const vals=series.map(o=>o.s[i]).filter(x=>x!=null);return vals.length?+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(idx?1:0):null;});
+  datasets.push({type:'line',label:'เฉลี่ย (แนวโน้ม)',data:avg,borderColor:'#ffd166',backgroundColor:'#ffd166',borderWidth:2.5,borderDash:[6,4],pointRadius:3,tension:.3,order:-1});
+  const yf=idx?(x=>x+'%'):fmt;
+  if(charts.cTrend)charts.cTrend.destroy();
+  charts.cTrend=new Chart(document.getElementById('cTrend'),{type:'bar',data:{labels:ms,datasets},
+    options:{responsive:true,interaction:{mode:'index',intersect:false},layout:{padding:{top:8}},scales:{y:{ticks:{callback:yf}}},
+      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#e7eaf0'}},
+        tooltip:{callbacks:{label:c=>c.dataset.label+': '+yf(c.parsed.y)}},datalabels:{display:false}}}});
 }
 function renderChannel(){
   const tutor=v('chTutor'),sel=v('chMetric'),ms=months();

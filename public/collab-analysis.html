@@ -67,6 +67,7 @@
     <div class="sub" id="sub">กำลังโหลดข้อมูล…</div>
     <div class="filters">
       <span><label class="fl">เดือน</label><select id="fMonth"><option value="">ทั้งหมด (รวม)</option></select></span>
+      <span><label class="fl">เทียบกับ</label><select id="fCompare"><option value="">—</option></select></span>
       <span><label class="fl">เทรนด์แสดง</label><select id="trendMetric">
         <option value="engagement">Engagement</option><option value="impressions">Impressions</option><option value="posts">จำนวนโพสต์</option><option value="reachPerPost">Reach/post</option></select></span>
       <button id="refresh" class="btn">🔄 รีเฟรชข้อมูล</button>
@@ -156,16 +157,23 @@ function agg(rows){
     rate:t.impressions?t.engagement/t.impressions:0,reachPerPost:t.posts?Math.round(t.rw/t.posts):0,
     watch:t.posts?+(t.ww/t.posts).toFixed(2):0,epp:t.posts?Math.round(t.engagement/t.posts):0}));
 }
-function bar(id,labels,data,colors,fmtFn){
+function bar(id,labels,data,colors,fmtFn,cmp,labA,labB){
   if(charts[id])charts[id].destroy();
+  const hasC=!!cmp, all=data.concat(hasC?cmp:[]);
+  const ds=[{data,backgroundColor:colors,borderRadius:6,label:labA||'ช่วง A'}];
+  if(hasC)ds.push({data:cmp,backgroundColor:'#5a6473',borderRadius:6,label:labB||'ช่วง B'});
   charts[id]=new Chart(document.getElementById(id),{type:'bar',
-    data:{labels,datasets:[{data,backgroundColor:colors,borderRadius:6}]},
-    options:{responsive:true,layout:{padding:{top:22}},scales:{y:{suggestedMax:Math.max(1,...data)*1.18,ticks:{callback:fmtFn}}},
-      plugins:{legend:{display:false},datalabels:{color:'#cdd6e6',anchor:'end',align:'top',font:{weight:'600',size:11},formatter:x=>x>0?fmtFn(x):''}}}});
+    data:{labels,datasets:ds},
+    options:{responsive:true,layout:{padding:{top:hasC?46:22}},scales:{y:{suggestedMax:Math.max(1,...all)*(hasC?1.3:1.18),ticks:{callback:fmtFn}}},
+      plugins:{legend:{display:hasC,labels:{boxWidth:12,color:'#e7eaf0'}},
+        datalabels:{display:'auto',clamp:true,color:'#cdd6e6',anchor:'end',align:'top',rotation:hasC?-90:0,font:{weight:'600',size:hasC?9:11},formatter:x=>x>0?fmtFn(x):''}}}});
 }
 function render(){
   const fm=v('fMonth');
   const a=agg((DATA.collab||[]).filter(r=>!fm||r.month===fm));
+  const fc=v('fCompare'), labA=fm||'รวม', labB=fc;
+  const Bmap={}; if(fc){agg((DATA.collab||[]).filter(r=>r.month===fc)).forEach(t=>Bmap[t.tutor]=t);}
+  const cv=(arr,key,mul)=>fc?arr.map(t=>{const b=Bmap[t.tutor];if(!b)return 0;return mul?+(b[key]*mul).toFixed(2):b[key];}):null;
   const top=k=>a.slice().sort((x,y)=>y[k]-x[k])[0];
   const tE=top('engagement'),tR=top('rate'),tRe=top('reachPerPost'),tP=top('posts');
   const set=(id,t)=>document.getElementById(id).textContent=t;
@@ -175,13 +183,13 @@ function render(){
   if(tP){set('kPosts',tP.tutor);set('kPostsV',tP.posts+' โพสต์');}
 
   const byEng=a.slice().sort((x,y)=>y.engagement-x.engagement);
-  bar('cEng',byEng.map(t=>t.tutor),byEng.map(t=>t.engagement),byEng.map(t=>tutorColor(t.tutor)),fmt);
+  bar('cEng',byEng.map(t=>t.tutor),byEng.map(t=>t.engagement),byEng.map(t=>tutorColor(t.tutor)),fmt,cv(byEng,'engagement'),labA,labB);
   const byRate=a.slice().sort((x,y)=>y.rate-x.rate);
-  bar('cRate',byRate.map(t=>t.tutor),byRate.map(t=>+(t.rate*100).toFixed(2)),byRate.map(t=>tutorColor(t.tutor)),x=>x+'%');
+  bar('cRate',byRate.map(t=>t.tutor),byRate.map(t=>+(t.rate*100).toFixed(2)),byRate.map(t=>tutorColor(t.tutor)),x=>x+'%',cv(byRate,'rate',100),labA,labB);
   const byReach=a.slice().sort((x,y)=>y.reachPerPost-x.reachPerPost);
-  bar('cReach',byReach.map(t=>t.tutor),byReach.map(t=>t.reachPerPost),byReach.map(t=>tutorColor(t.tutor)),fmt);
+  bar('cReach',byReach.map(t=>t.tutor),byReach.map(t=>t.reachPerPost),byReach.map(t=>tutorColor(t.tutor)),fmt,cv(byReach,'reachPerPost'),labA,labB);
   const byEpp=a.slice().sort((x,y)=>y.epp-x.epp);
-  bar('cEpp',byEpp.map(t=>t.tutor),byEpp.map(t=>t.epp),byEpp.map(t=>tutorColor(t.tutor)),fmt);
+  bar('cEpp',byEpp.map(t=>t.tutor),byEpp.map(t=>t.epp),byEpp.map(t=>tutorColor(t.tutor)),fmt,cv(byEpp,'epp'),labA,labB);
 
   renderTrend(); renderTable(a);
 }
@@ -246,6 +254,7 @@ function loadData(fresh){
     setSub();
     if(!document.querySelector('#fMonth option[data-built]')){
       months().forEach(m=>document.getElementById('fMonth').innerHTML+=`<option data-built="1">${m}</option>`);
+      months().forEach(m=>document.getElementById('fCompare').innerHTML+=`<option>${m}</option>`);
       [...new Set((DATA.collabPosts||[]).map(p=>p.collaboration).filter(Boolean))].forEach(cl=>document.getElementById('cpCollab').innerHTML+=`<option>${cl}</option>`);
     }
     render(); renderCollabPosts();
@@ -255,7 +264,7 @@ function loadData(fresh){
 loadData(false).then(()=>{
   document.getElementById('foot').textContent='ข้อมูล IG Collab Post ดึงสดจาก Google Sheet';
   if(!(DATA.collab||[]).length) document.getElementById('sub').textContent='ยังไม่มีข้อมูล Collab — ตรวจสิทธิ์ชีต/แท็บ';
-  ['fMonth','trendMetric'].forEach(id=>document.getElementById(id).onchange=render);
+  ['fMonth','fCompare','trendMetric'].forEach(id=>document.getElementById(id).onchange=render);
   ['cpCollab','cpFrom','cpTo','cpSort','cpDir'].forEach(id=>document.getElementById(id).onchange=()=>{CPPAGE=1;renderCollabPosts();});
   document.getElementById('cpPrev').onclick=()=>{if(CPPAGE>1){CPPAGE--;renderCollabPosts();}};
   document.getElementById('cpNext').onclick=()=>{CPPAGE++;renderCollabPosts();};

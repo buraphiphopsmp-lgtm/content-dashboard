@@ -29,7 +29,7 @@
   .kpi .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
   .kpi .val{font-size:22px;font-weight:700;margin-top:6px}
   .kpi .vsub{color:var(--muted);font-size:12px;margin-top:2px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+  .grid{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:18px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:18px}
   .card h3{margin:0 0 12px;font-size:15px;font-weight:600}
   .tbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -72,7 +72,7 @@
   <div class="subbar">
     <div class="sub" id="sub">กำลังโหลดข้อมูล…</div>
     <div class="filters">
-      <span><label class="fl">เดือน (snapshot)</label><select id="fMonth"></select></span>
+      <span><label class="fl">เดือน (snapshot)</label><select id="fMonth"><option value="">ทั้งหมด (รวม)</option></select></span>
       <span><label class="fl">เทียบกับ</label><select id="fCompare"><option value="">—</option></select></span>
       <span><label class="fl">ช่องทาง</label><select id="fNetwork"><option value="">ทุกช่องทาง (รวม)</option></select></span>
       <span><label class="fl">ดูตาม</label><select id="groupBy"><option value="tutor">Tutor</option><option value="profile">Profile</option></select></span>
@@ -179,17 +179,17 @@ const months=()=>[...new Set((DATA.tutors||[]).map(r=>r.month))].sort((a,b)=>mon
 function aggSnap(rows){
   const m={};
   const gk=v('groupBy')||'tutor';
+  const ms=[...new Set(rows.map(r=>r.month))].sort((a,b)=>monthKey(a)-monthKey(b)), latest=ms[ms.length-1];
   rows.forEach(r=>{const k=r[gk]||'(ไม่ระบุ)';if(!m[k])m[k]={tutor:k,follower:0,followerGrowth:0,posts:0,engagement:0,rw:0};
-    m[k].follower+=r.follower;m[k].followerGrowth+=r.followerGrowth;m[k].posts+=r.posts;m[k].engagement+=r.engagement;m[k].rw+=(r.rate||0)*r.posts;});
+    if(r.month===latest)m[k].follower+=r.follower;
+    m[k].followerGrowth+=r.followerGrowth;m[k].posts+=r.posts;m[k].engagement+=r.engagement;m[k].rw+=(r.rate||0)*r.posts;});
   return Object.values(m).map(t=>({...t,rate:t.posts?+(t.rw/t.posts).toFixed(2):0}));
 }
 function bar(id,labels,data,colors,fmtFn,cmp,labA,labB){
   if(charts[id])charts[id].destroy();
   const hasC=!!cmp, all=data.concat(hasC?cmp:[]);
   const mx=Math.max(0,...all), mn=Math.min(0,...all);
-  const cv=document.getElementById(id), box=cv.parentElement;
-  const per=hasC?74:50, avail=(box.parentElement&&box.parentElement.clientWidth)||600;
-  if(box.classList.contains('cbox')) box.style.width=Math.max(avail,labels.length*per)+'px';
+  const cv=document.getElementById(id);
   const ds=[{data,backgroundColor:colors,borderRadius:6,label:labA||'ช่วง A'}];
   if(hasC)ds.push({data:cmp,backgroundColor:'#5a6473',borderRadius:6,label:labB||'ช่วง B'});
   charts[id]=new Chart(cv,{type:'bar',
@@ -206,7 +206,7 @@ function lineChart(id,labels,datasets){
       plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#e7eaf0'}},datalabels:{display:false}}}});
 }
 function rowsForMonth(fm){const fn=v('fNetwork');return (DATA.tutors||[]).filter(r=>r.month===fm&&(!fn||r.network===fn));}
-function scope(){return rowsForMonth(v('fMonth'));}
+function scope(){const fm=v('fMonth'),fn=v('fNetwork');return (DATA.tutors||[]).filter(r=>(!fm||r.month===fm)&&(!fn||r.network===fn));}
 
 function render(){
   document.querySelector('#tbl thead th[data-s="tutor"]').textContent=(v('groupBy')==='profile'?'Profile':'Tutor');
@@ -311,9 +311,9 @@ function loadData(fresh){
     const keys=[...new Set((DATA.tutors||[]).flatMap(r=>[r.tutor,r.profile]).filter(Boolean))];
     let pi=0; keys.forEach(t=>{if(t!==ME)TCOL[t]=PALETTE[pi++%PALETTE.length];});
     setSub();
-    if(!document.querySelector('#fMonth option')){
+    if(!document.querySelector('#fMonth option[data-built]')){
       const ms=months();
-      ms.forEach(m=>document.getElementById('fMonth').innerHTML+=`<option>${m}</option>`);
+      ms.forEach(m=>document.getElementById('fMonth').innerHTML+=`<option data-built="1">${m}</option>`);
       document.getElementById('fMonth').value=ms[ms.length-1]||'';
       ms.forEach(m=>document.getElementById('fCompare').innerHTML+=`<option>${m}</option>`);
       [...new Set((DATA.tutors||[]).map(r=>r.network))].forEach(n=>document.getElementById('fNetwork').innerHTML+=`<option>${n}</option>`);

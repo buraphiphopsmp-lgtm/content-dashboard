@@ -166,9 +166,7 @@ function bar(id,labels,data,colors,fmtFn,cmp,labA,labB){
   const hasC=!!cmp, all=data.concat(hasC?cmp:[]);
   const ds=[{data,backgroundColor:colors,borderRadius:6,label:labA||'ช่วง A'}];
   if(hasC)ds.push({data:cmp,backgroundColor:'#5a6473',borderRadius:6,label:labB||'ช่วง B'});
-  const cv=document.getElementById(id), box=cv.parentElement;
-  const per=hasC?74:50, avail=(box.parentElement&&box.parentElement.clientWidth)||600;
-  if(box.classList.contains('cbox')) box.style.width=Math.max(avail,labels.length*per)+'px';
+  const cv=document.getElementById(id);
   charts[id]=new Chart(cv,{type:'bar',
     data:{labels,datasets:ds},
     options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:hasC?46:22}},scales:{y:{suggestedMax:Math.max(1,...all)*(hasC?1.3:1.18),ticks:{callback:fmtFn}}},

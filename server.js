@@ -11,6 +11,7 @@ const GID_SUMMARY = '307838850';   // แท็บสรุปรายเดื
 const GID_POSTS   = '277724235';   // แท็บรายโพสต์ (Pillar, Date, Message, Network ...)
 const GID_TUTOR   = '46843437';    // แท็บ "Raw data by Tutor Platform" (Follower, Follower Growth, Tutor, Network ...)
 const GID_TCONTENT = '1543994548'; // แท็บ "Raw data Top content (incl. Tutor Platform)" (post-level by tutor)
+const GID_COLLAB   = '1620780602'; // แท็บ "Raw Data Tutor Overview (IG Collab Post)" (สรุป IG collab รายเดือน)
 const CACHE_MS = 2 * 60 * 1000;    // cache 2 นาที
 const csvUrl = (gid) => `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
 
@@ -119,6 +120,18 @@ function buildTutorPosts(rows) {
     };
   }).filter(x => x.tutor && x.network);
 }
+function buildCollab(rows) {
+  const h = header(rows);
+  const c = { month: h.exact('Month-Year'), tutor: h.exact('Tutor'), network: h.exact('Network'),
+    posts: h.incl('Number of posts'), eng: h.incl('Reactions'), impressions: h.exact('Impressions/views of posts'),
+    reach: h.incl('Reach per post'), watch: h.incl('watch time') };
+  return h.body.map(r => ({
+    month: clean(r[c.month]), tutor: clean(r[c.tutor]), network: normNet(r[c.network]),
+    posts: Math.round(num(r[c.posts])), engagement: Math.round(num(r[c.eng])),
+    impressions: Math.round(num(r[c.impressions])), reachPerPost: Math.round(num(r[c.reach])),
+    watch: Math.round(num(r[c.watch]) * 100) / 100,
+  })).filter(x => x.tutor);
+}
 
 async function getData(force) {
   if (!force && CACHE.data && Date.now() - CACHE.ts < CACHE_MS) return CACHE.data;
@@ -129,11 +142,13 @@ async function getData(force) {
   try { tutors = buildTutors(await fetchCsv(GID_TUTOR)); } catch (e) { /* tutor tab optional */ }
   let tutorPosts = [];
   try { tutorPosts = buildTutorPosts(await fetchCsv(GID_TCONTENT)); } catch (e) { /* optional */ }
+  let collab = [];
+  try { collab = buildCollab(await fetchCsv(GID_COLLAB)); } catch (e) { /* optional */ }
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   const stamp = `${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())} UTC`;
   const data = { meta: { source: 'Raw data Pillar SMP', month: 'May 2026', generatedAt: stamp,
-    rows: summary.length, postsAnalyzed: posts.length }, summary, posts, tutors, tutorPosts };
+    rows: summary.length, postsAnalyzed: posts.length }, summary, posts, tutors, tutorPosts, collab };
   CACHE = { ts: Date.now(), data };
   return data;
 }

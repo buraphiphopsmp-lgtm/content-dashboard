@@ -9,6 +9,7 @@ const PUBLIC = path.join(__dirname, 'public');
 const SHEET_ID = '1PORT556ite9ATGh91lYc3KdGAMz6h4fVoL_0vM6u0g4';
 const GID_SUMMARY = '307838850';   // แท็บสรุปรายเดือน (Month, Platform, Profile/Pillar ...)
 const GID_POSTS   = '277724235';   // แท็บรายโพสต์ (Pillar, Date, Message, Network ...)
+const GID_TUTOR   = '1620780602';  // แท็บสรุปติวเตอร์ (Month-Year, Tutor, Network, posts, eng, imp, reach ...)
 const CACHE_MS = 2 * 60 * 1000;    // cache 2 นาที
 const csvUrl = (gid) => `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
 
@@ -88,17 +89,31 @@ function buildPosts(rows) {
     };
   }).filter(x => x.network);
 }
+function buildTutors(rows) {
+  const h = header(rows);
+  const c = { month: h.exact('Month-Year'), tutor: h.exact('Tutor'), network: h.exact('Network'),
+    posts: h.incl('Number of posts'), eng: h.incl('Reactions'), impressions: h.exact('Impressions/views of posts'),
+    reach: h.incl('Reach per post'), watch: h.incl('watch time') };
+  return h.body.map(r => ({
+    month: clean(r[c.month]), tutor: clean(r[c.tutor]), network: normNet(r[c.network]),
+    posts: Math.round(num(r[c.posts])), engagement: Math.round(num(r[c.eng])),
+    impressions: Math.round(num(r[c.impressions])), reachPerPost: Math.round(num(r[c.reach])),
+    watch: Math.round(num(r[c.watch]) * 100) / 100,
+  })).filter(x => x.tutor);
+}
 
 async function getData(force) {
   if (!force && CACHE.data && Date.now() - CACHE.ts < CACHE_MS) return CACHE.data;
   const [sumRows, postRows] = await Promise.all([fetchCsv(GID_SUMMARY), fetchCsv(GID_POSTS)]);
   const summary = buildSummary(sumRows);
   const posts = buildPosts(postRows);
+  let tutors = [];
+  try { tutors = buildTutors(await fetchCsv(GID_TUTOR)); } catch (e) { /* tutor tab optional */ }
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   const stamp = `${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())} UTC`;
   const data = { meta: { source: 'Raw data Pillar SMP', month: 'May 2026', generatedAt: stamp,
-    rows: summary.length, postsAnalyzed: posts.length }, summary, posts };
+    rows: summary.length, postsAnalyzed: posts.length }, summary, posts, tutors };
   CACHE = { ts: Date.now(), data };
   return data;
 }

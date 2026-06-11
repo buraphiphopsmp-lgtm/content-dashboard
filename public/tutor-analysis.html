@@ -32,7 +32,8 @@
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:18px}
   .card h3{margin:0 0 12px;font-size:15px;font-weight:600}
-  .full{grid-column:1 / -1}
+  .tbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .tbar .left{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   canvas{max-height:320px}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
@@ -40,6 +41,7 @@
   th.sortable{cursor:pointer;user-select:none}th.sortable:hover{color:var(--txt)}
   td.num,th.num{text-align:right;white-space:nowrap}
   .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .me{color:var(--accent2);font-weight:700}
   .foot{color:var(--muted);font-size:12px;margin:18px 0;text-align:center}
   @media(max-width:880px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
 </style>
@@ -59,9 +61,9 @@
     <div class="sub" id="sub">กำลังโหลดข้อมูล…</div>
     <div class="filters">
       <span><label class="fl">เดือน</label><select id="fMonth"><option value="">ทั้งหมด (รวม)</option></select></span>
-      <span><label class="fl">เทรนด์แสดง</label><select id="trendMetric">
-        <option value="engagement">Engagement</option><option value="impressions">Impressions</option>
-        <option value="posts">จำนวนโพสต์</option><option value="reachPerPost">Reach/post</option></select></span>
+      <span><label class="fl">ช่องทาง</label><select id="fNetwork"><option value="">ทุกช่องทาง (รวม)</option></select></span>
+      <span><label class="fl">เทรนด์เทียบติวเตอร์</label><select id="trendMetric">
+        <option value="engagement">Engagement</option><option value="impressions">Impressions</option><option value="posts">จำนวนโพสต์</option></select></span>
       <button id="refresh" class="btn">🔄 รีเฟรชข้อมูล</button>
       <span id="lastUpdate" class="upd"></span>
     </div>
@@ -81,7 +83,19 @@
     <div class="card" style="margin:0"><h3>Engagement ต่อโพสต์ ตาม Tutor</h3><canvas id="cEpp"></canvas></div>
   </div>
 
-  <div class="card"><h3>แนวโน้มรายเดือน (ทุกเดือน · เลือกเมตริกได้)</h3><canvas id="cTrend" style="max-height:360px"></canvas></div>
+  <div class="card"><h3>📈 แนวโน้มรายเดือน — เทียบติวเตอร์</h3><canvas id="cTrend" style="max-height:340px"></canvas></div>
+
+  <div class="card">
+    <div class="tbar">
+      <h3 style="margin:0">🚀 การเติบโตของช่องทาง (รายติวเตอร์)</h3>
+      <div class="left">
+        <label class="fl">ติวเตอร์</label><select id="chTutor"></select>
+        <label class="fl" style="margin-left:6px">เมตริก</label><select id="chMetric">
+          <option value="engagement">Engagement</option><option value="impressions">Impressions</option><option value="posts">จำนวนโพสต์</option></select>
+      </div>
+    </div>
+    <canvas id="cChannel" style="max-height:360px"></canvas>
+  </div>
 
   <div class="card">
     <h3>ตารางเปรียบเทียบ Tutor</h3>
@@ -105,7 +119,9 @@
 </div>
 
 <script>
-const PALETTE=['#5b8cff','#27c4a6','#E4405F','#f5a524','#9b8cff','#25F4EE','#ff7a59','#7ee787'];
+const PLAT_COLORS={Facebook:'#1877F2',Instagram:'#E4405F',TikTok:'#25F4EE',X:'#E7E9EA',YouTube:'#FF0000'};
+const PALETTE=['#27c4a6','#5b8cff','#E4405F','#f5a524','#9b8cff','#25F4EE','#ff7a59','#7ee787'];
+const ME="P'Pan";
 const fmt=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':Math.round(n).toLocaleString();
 const pct=n=>(n*100).toFixed(2)+'%';
 const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -116,7 +132,10 @@ Chart.register(ChartDataLabels);
 Chart.defaults.color='#9aa3b2'; Chart.defaults.borderColor='#2b303c';
 Chart.defaults.font.family="'Segoe UI',Tahoma,'Sarabun',sans-serif";
 
-const tutorColor=t=>TCOL[t]||'#888';
+const tutorColor=t=>t===ME?'#27c4a6':(TCOL[t]||'#888');
+const monthKey=m=>{const d=new Date('1 '+m);return isNaN(d)?0:d.getTime();};
+const months=()=>[...new Set((DATA.tutors||[]).map(r=>r.month))].sort((a,b)=>monthKey(a)-monthKey(b));
+
 function aggTutors(rows){
   const m={};
   rows.forEach(r=>{const k=r.tutor;if(!m[k])m[k]={tutor:k,posts:0,engagement:0,impressions:0,rw:0,ww:0};
@@ -130,15 +149,14 @@ function bar(id,labels,data,colors,fmtFn){
   if(charts[id])charts[id].destroy();
   charts[id]=new Chart(document.getElementById(id),{type:'bar',
     data:{labels,datasets:[{data,backgroundColor:colors,borderRadius:6}]},
-    options:{responsive:true,layout:{padding:{top:22}},scales:{y:{ticks:{callback:fmtFn}}},
+    options:{responsive:true,layout:{padding:{top:22}},scales:{y:{ticks:{callback:fmtFn},suggestedMax:Math.max(1,...data)*1.18}},
       plugins:{legend:{display:false},datalabels:{color:'#cdd6e6',anchor:'end',align:'top',font:{weight:'600',size:11},formatter:x=>x>0?fmtFn(x):''}}}});
 }
-const monthKey=m=>{const d=new Date('1 '+m);return isNaN(d)?m:d.getTime();};
+
+function scope(){const fm=v('fMonth'),fn=v('fNetwork');return (DATA.tutors||[]).filter(r=>(!fm||r.month===fm)&&(!fn||r.network===fn));}
 
 function render(){
-  const fm=v('fMonth');
-  const rows=(DATA.tutors||[]).filter(r=>!fm||r.month===fm);
-  const agg=aggTutors(rows);
+  const agg=aggTutors(scope());
   const top=k=>agg.slice().sort((a,b)=>b[k]-a[k])[0];
   const tE=top('engagement'),tR=top('rate'),tRe=top('reachPerPost'),tP=top('posts');
   const set=(id,t)=>document.getElementById(id).textContent=t;
@@ -156,28 +174,37 @@ function render(){
   const byEpp=agg.slice().sort((a,b)=>b.epp-a.epp);
   bar('cEpp',byEpp.map(t=>t.tutor),byEpp.map(t=>t.epp),byEpp.map(t=>tutorColor(t.tutor)),fmt);
 
-  renderTrend();
-  renderTable(agg);
+  renderTrend(); renderTable(agg);
 }
-function renderTrend(){
-  const mkey=v('trendMetric');
-  const months=[...new Set((DATA.tutors||[]).map(r=>r.month))].sort((a,b)=>monthKey(a)-monthKey(b));
-  const tutors=[...new Set((DATA.tutors||[]).map(r=>r.tutor))];
-  const datasets=tutors.map(t=>({label:t,borderColor:tutorColor(t),backgroundColor:tutorColor(t),
-    tension:.3,pointRadius:3,
-    data:months.map(m=>{const r=(DATA.tutors||[]).find(x=>x.tutor===t&&x.month===m);return r?r[mkey]:0;})}));
-  if(charts.cTrend)charts.cTrend.destroy();
-  charts.cTrend=new Chart(document.getElementById('cTrend'),{type:'line',data:{labels:months,datasets},
+function lineChart(id,labels,datasets){
+  if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(document.getElementById(id),{type:'line',data:{labels,datasets},
     options:{responsive:true,interaction:{mode:'index',intersect:false},
       scales:{y:{ticks:{callback:fmt}}},
       plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#e7eaf0'}},datalabels:{display:false}}}});
+}
+function renderTrend(){
+  const mkey=v('trendMetric'),fn=v('fNetwork'),ms=months();
+  const tutors=[...new Set((DATA.tutors||[]).map(r=>r.tutor))];
+  const datasets=tutors.map(t=>({label:t,borderColor:tutorColor(t),backgroundColor:tutorColor(t),tension:.3,pointRadius:3,
+    borderWidth:t===ME?3:1.5,
+    data:ms.map(m=>(DATA.tutors||[]).filter(r=>r.tutor===t&&r.month===m&&(!fn||r.network===fn)).reduce((s,r)=>s+(r[mkey]||0),0))}));
+  lineChart('cTrend',ms,datasets);
+}
+function renderChannel(){
+  const tutor=v('chTutor'),mkey=v('chMetric'),ms=months();
+  const rows=(DATA.tutors||[]).filter(r=>r.tutor===tutor);
+  const nets=[...new Set(rows.map(r=>r.network))];
+  const datasets=nets.map(n=>({label:n,borderColor:PLAT_COLORS[n]||'#888',backgroundColor:PLAT_COLORS[n]||'#888',tension:.3,pointRadius:3,
+    data:ms.map(m=>rows.filter(r=>r.network===n&&r.month===m).reduce((s,r)=>s+(r[mkey]||0),0))}));
+  lineChart('cChannel',ms,datasets);
 }
 function renderTable(agg){
   const arr=agg.slice().sort((a,b)=> sortKey==='tutor'
     ? (a.tutor>b.tutor?sortDir:a.tutor<b.tutor?-sortDir:0) : (a[sortKey]-b[sortKey])*sortDir);
   const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
-  arr.forEach(t=>{const tr=document.createElement('tr');
-    tr.innerHTML=`<td><span class="dot" style="background:${tutorColor(t.tutor)}"></span>${esc(t.tutor)}</td>
+  arr.forEach(t=>{const tr=document.createElement('tr');const me=t.tutor===ME?' class="me"':'';
+    tr.innerHTML=`<td><span class="dot" style="background:${tutorColor(t.tutor)}"></span><span${me}>${esc(t.tutor)}${t.tutor===ME?' (เรา)':''}</span></td>
       <td class="num">${t.posts.toLocaleString()}</td><td class="num">${t.engagement.toLocaleString()}</td>
       <td class="num">${t.impressions.toLocaleString()}</td><td class="num">${pct(t.rate)}</td>
       <td class="num">${t.reachPerPost.toLocaleString()}</td><td class="num">${t.watch}</td>`;
@@ -187,8 +214,8 @@ function renderTable(agg){
 function fmtU(s){const m=(s||'').match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);if(!m)return s||'-';
   const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]));
   return d.toLocaleString('th-TH',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})+' น.';}
-function setSub(){const m=DATA.meta||{},tu=[...new Set((DATA.tutors||[]).map(r=>r.tutor))].length;
-  document.getElementById('sub').textContent=`เปรียบเทียบติวเตอร์ ${tu} ราย · ${(DATA.tutors||[]).length} แถว (Instagram) · จากชีต Raw data by Tutor Platform`;
+function setSub(){const m=DATA.meta||{},tu=[...new Set((DATA.tutors||[]).map(r=>r.tutor))].length,nets=[...new Set((DATA.tutors||[]).map(r=>r.network))].length;
+  document.getElementById('sub').textContent=`เทียบติวเตอร์ ${tu} ราย · ${nets} ช่องทาง · รวม P'Pan (เรา) · จากชีต Raw data by Tutor`;
   document.getElementById('lastUpdate').textContent='🕒 อัปเดตล่าสุด: '+fmtU(m.generatedAt);}
 function loadData(fresh){
   const btn=document.getElementById('refresh');
@@ -196,20 +223,22 @@ function loadData(fresh){
   return fetch('content-data.json?'+(fresh?'fresh=1&':'')+Date.now()).then(r=>r.json()).then(d=>{
     DATA=d;
     const tutors=[...new Set((DATA.tutors||[]).map(r=>r.tutor))];
-    tutors.forEach((t,i)=>TCOL[t]=PALETTE[i%PALETTE.length]);
+    tutors.forEach((t,i)=>{if(t!==ME)TCOL[t]=PALETTE[(i+1)%PALETTE.length];});
     setSub();
     if(!document.querySelector('#fMonth option[data-built]')){
-      const months=[...new Set((DATA.tutors||[]).map(r=>r.month))].sort((a,b)=>monthKey(a)-monthKey(b));
-      months.forEach(m=>document.getElementById('fMonth').innerHTML+=`<option data-built="1">${m}</option>`);
+      months().forEach(m=>document.getElementById('fMonth').innerHTML+=`<option data-built="1">${m}</option>`);
+      [...new Set((DATA.tutors||[]).map(r=>r.network))].forEach(n=>document.getElementById('fNetwork').innerHTML+=`<option>${n}</option>`);
+      tutors.sort((a,b)=>a===ME?-1:b===ME?1:0).forEach(t=>document.getElementById('chTutor').innerHTML+=`<option>${t}</option>`);
     }
-    render();
+    render(); renderChannel();
   }).catch(e=>{document.getElementById('sub').textContent='โหลดข้อมูลไม่สำเร็จ';console.error(e);})
    .finally(()=>{if(btn){btn.disabled=false;btn.textContent='🔄 รีเฟรชข้อมูล';}});
 }
 loadData(false).then(()=>{
-  document.getElementById('foot').textContent='ข้อมูลติวเตอร์ดึงสดจาก Google Sheet (แท็บ Tutor)';
-  if(!(DATA.tutors||[]).length) document.getElementById('sub').textContent='ยังไม่มีข้อมูล Tutor — ตรวจว่าชีตเปิดสิทธิ์และมีแท็บ Tutor';
-  ['fMonth','trendMetric'].forEach(id=>document.getElementById(id).onchange=render);
+  document.getElementById('foot').textContent='ข้อมูลติวเตอร์ดึงสดจาก Google Sheet · P\'Pan = แบรนด์เรา (SmartMathPro) · คู่แข่งมีข้อมูลหลักบน Instagram';
+  if(!(DATA.tutors||[]).length) document.getElementById('sub').textContent='ยังไม่มีข้อมูล Tutor — ตรวจสิทธิ์ชีต/แท็บ Tutor';
+  ['fMonth','fNetwork','trendMetric'].forEach(id=>document.getElementById(id).onchange=render);
+  ['chTutor','chMetric'].forEach(id=>document.getElementById(id).onchange=renderChannel);
   document.getElementById('refresh').onclick=()=>loadData(true);
   document.querySelectorAll('#tbl th.sortable').forEach(th=>th.onclick=()=>{
     const s=th.dataset.s; if(sortKey===s)sortDir=-sortDir; else{sortKey=s;sortDir=s==='tutor'?1:-1;} render();});

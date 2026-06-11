@@ -114,7 +114,8 @@
       <h3 style="margin:0">🏆 Top Content (โพสต์ IG Collab)</h3>
       <div class="left">
         <label class="fl">Collab</label><select id="cpCollab"><option value="">ทั้งหมด</option></select>
-        <label class="fl" style="margin-left:6px">วันที่</label><input type="date" id="cpFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="cpTo">
+        <label class="fl" style="margin-left:6px">ช่วง A</label><input type="date" id="cpAFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="cpATo">
+        <label class="fl" style="margin-left:6px">เทียบช่วง B</label><input type="date" id="cpBFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="cpBTo">
         <label class="fl" style="margin-left:6px">เรียงตาม</label>
         <select id="cpSort"><option value="engagement">Engagement</option><option value="impressions">Impressions</option><option value="reachPerPost">Reach/post</option><option value="rate">Eng Rate</option><option value="date">วันที่</option></select>
         <select id="cpDir"><option value="desc">มาก → น้อย</option><option value="asc">น้อย → มาก</option></select>
@@ -122,7 +123,7 @@
     </div>
     <div style="overflow-x:auto">
     <table id="cpTable"><thead><tr>
-      <th>#</th><th>วันที่</th><th>Collaboration</th><th>Tutor</th><th>Profile</th>
+      <th>#</th><th>วันที่</th><th>ช่วง</th><th>Collaboration</th><th>Tutor</th><th>Profile</th>
       <th class="num">Engagement</th><th class="num">Impressions</th><th class="num">Reach/post</th><th class="num">Eng Rate</th><th>Message</th><th>Link</th>
     </tr></thead><tbody></tbody></table>
     </div>
@@ -215,9 +216,18 @@ function renderTable(a){
 }
 
 let CPPAGE=1; const CPPER=20;
+const inR=(d,f,t)=>(!f||(d||'')>=f)&&(!t||(d||'')<=t);
 function cpFiltered(){
-  const cl=v('cpCollab'),f=v('cpFrom'),t=v('cpTo');
-  let arr=(DATA.collabPosts||[]).filter(p=>(!cl||p.collaboration===cl)&&(!f||(p.date||'')>=f)&&(!t||(p.date||'')<=t));
+  const cl=v('cpCollab');
+  const aF=v('cpAFrom'),aT=v('cpATo'),bF=v('cpBFrom'),bT=v('cpBTo');
+  const hasA=!!(aF||aT),hasB=!!(bF||bT);
+  let arr=[];
+  (DATA.collabPosts||[]).forEach(p=>{
+    if(cl&&p.collaboration!==cl)return;
+    if(!hasA&&!hasB){arr.push(Object.assign({_p:''},p));return;}
+    if(hasA&&inR(p.date,aF,aT)){arr.push(Object.assign({_p:hasB?'A':''},p));return;}
+    if(hasB&&inR(p.date,bF,bT)){arr.push(Object.assign({_p:'B'},p));}
+  });
   const sf=v('cpSort'),dir=v('cpDir')==='asc'?1:-1;
   arr.sort((a,b)=> sf==='date'?(a.date>b.date?dir:a.date<b.date?-dir:0):(a[sf]-b[sf])*dir);
   return arr;
@@ -230,6 +240,7 @@ function renderCollabPosts(){
   const tb=document.querySelector('#cpTable tbody'); tb.innerHTML='';
   slice.forEach((p,i)=>{const tr=document.createElement('tr');
     tr.innerHTML=`<td>${start+i+1}</td><td style="white-space:nowrap">${p.date||''}</td>
+      <td>${p._p?`<span style="font-weight:700;color:${p._p==='A'?'#27c4a6':'#9aa3b2'}">${p._p}</span>`:''}</td>
       <td>${esc(p.collaboration)}</td><td>${esc(p.tutor)}</td><td>${esc(p.profile)}</td>
       <td class="num">${(p.engagement||0).toLocaleString()}</td><td class="num">${(p.impressions||0).toLocaleString()}</td>
       <td class="num">${(p.reachPerPost||0).toLocaleString()}</td><td class="num">${(p.rate||0).toFixed(2)}%</td>
@@ -265,7 +276,7 @@ loadData(false).then(()=>{
   document.getElementById('foot').textContent='ข้อมูล IG Collab Post ดึงสดจาก Google Sheet';
   if(!(DATA.collab||[]).length) document.getElementById('sub').textContent='ยังไม่มีข้อมูล Collab — ตรวจสิทธิ์ชีต/แท็บ';
   ['fMonth','fCompare','trendMetric'].forEach(id=>document.getElementById(id).onchange=render);
-  ['cpCollab','cpFrom','cpTo','cpSort','cpDir'].forEach(id=>document.getElementById(id).onchange=()=>{CPPAGE=1;renderCollabPosts();});
+  ['cpCollab','cpAFrom','cpATo','cpBFrom','cpBTo','cpSort','cpDir'].forEach(id=>document.getElementById(id).onchange=()=>{CPPAGE=1;renderCollabPosts();});
   document.getElementById('cpPrev').onclick=()=>{if(CPPAGE>1){CPPAGE--;renderCollabPosts();}};
   document.getElementById('cpNext').onclick=()=>{CPPAGE++;renderCollabPosts();};
   document.getElementById('refresh').onclick=()=>loadData(true);

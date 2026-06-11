@@ -137,7 +137,8 @@
       <div class="left">
         <label class="fl">ติวเตอร์</label><select id="tpTutor"><option value="">ทั้งหมด</option></select>
         <label class="fl" style="margin-left:6px">ช่องทาง</label><select id="tpNet"><option value="">ทั้งหมด</option></select>
-        <label class="fl" style="margin-left:6px">วันที่</label><input type="date" id="tpFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="tpTo">
+        <label class="fl" style="margin-left:6px">ช่วง A</label><input type="date" id="tpAFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="tpATo">
+        <label class="fl" style="margin-left:6px">เทียบช่วง B</label><input type="date" id="tpBFrom"> <span style="color:var(--muted)">–</span> <input type="date" id="tpBTo">
         <label class="fl" style="margin-left:6px">เรียงตาม</label>
         <select id="tpSort"><option value="engagement">Engagement</option><option value="impressions">Impressions</option><option value="reachPerPost">Reach/post</option><option value="date">วันที่</option></select>
         <select id="tpDir"><option value="desc">มาก → น้อย</option><option value="asc">น้อย → มาก</option></select>
@@ -145,7 +146,7 @@
     </div>
     <div style="overflow-x:auto">
     <table id="tpTable"><thead><tr>
-      <th>#</th><th>วันที่</th><th>Tutor</th><th>Network</th><th>Profile</th>
+      <th>#</th><th>วันที่</th><th>ช่วง</th><th>Tutor</th><th>Network</th><th>Profile</th>
       <th class="num">Engagement</th><th class="num">Impressions</th><th class="num">Reach/post</th><th>Message</th><th>Link</th>
     </tr></thead><tbody></tbody></table>
     </div>
@@ -254,9 +255,18 @@ function renderTable(agg){
 }
 
 let TPPAGE=1; const TPPER=20;
+const inR=(d,f,t)=>(!f||(d||'')>=f)&&(!t||(d||'')<=t);
 function tpFiltered(){
-  const tu=v('tpTutor'),nw=v('tpNet'),f=v('tpFrom'),t=v('tpTo');
-  let arr=(DATA.tutorPosts||[]).filter(p=>(!tu||p.tutor===tu)&&(!nw||p.network===nw)&&(!f||(p.date||'')>=f)&&(!t||(p.date||'')<=t));
+  const tu=v('tpTutor'),nw=v('tpNet');
+  const aF=v('tpAFrom'),aT=v('tpATo'),bF=v('tpBFrom'),bT=v('tpBTo');
+  const hasA=!!(aF||aT),hasB=!!(bF||bT);
+  let arr=[];
+  (DATA.tutorPosts||[]).forEach(p=>{
+    if(tu&&p.tutor!==tu)return; if(nw&&p.network!==nw)return;
+    if(!hasA&&!hasB){arr.push(Object.assign({_p:''},p));return;}
+    if(hasA&&inR(p.date,aF,aT)){arr.push(Object.assign({_p:hasB?'A':''},p));return;}
+    if(hasB&&inR(p.date,bF,bT)){arr.push(Object.assign({_p:'B'},p));}
+  });
   const sf=v('tpSort'),dir=v('tpDir')==='asc'?1:-1;
   arr.sort((a,b)=> sf==='date'?(a.date>b.date?dir:a.date<b.date?-dir:0):(a[sf]-b[sf])*dir);
   return arr;
@@ -269,6 +279,7 @@ function renderTopContent(){
   const tb=document.querySelector('#tpTable tbody'); tb.innerHTML='';
   slice.forEach((p,i)=>{const col=PLAT_COLORS[p.network]||'#9aa3b2';const tr=document.createElement('tr');
     tr.innerHTML=`<td>${start+i+1}</td><td style="white-space:nowrap">${p.date||''}</td>
+      <td>${p._p?`<span style="font-weight:700;color:${p._p==='A'?'#27c4a6':'#9aa3b2'}">${p._p}</span>`:''}</td>
       <td><span${p.tutor===ME?' class="me"':''}>${esc(p.tutor)}</span></td>
       <td><span class="badge" style="background:${col}22;color:${col}">${esc(p.network)}</span></td>
       <td>${esc(p.profile)}</td><td class="num">${(p.engagement||0).toLocaleString()}</td>
@@ -314,7 +325,7 @@ loadData(false).then(()=>{
   ['fMonth','fCompare','fNetwork','trendMetric','groupBy'].forEach(id=>document.getElementById(id).onchange=render);
   ['chTutor','chMetric'].forEach(id=>document.getElementById(id).onchange=renderChannel);
   document.getElementById('trendMetric').onchange=()=>{render();};
-  ['tpTutor','tpNet','tpFrom','tpTo','tpSort','tpDir'].forEach(id=>document.getElementById(id).onchange=()=>{TPPAGE=1;renderTopContent();});
+  ['tpTutor','tpNet','tpAFrom','tpATo','tpBFrom','tpBTo','tpSort','tpDir'].forEach(id=>document.getElementById(id).onchange=()=>{TPPAGE=1;renderTopContent();});
   document.getElementById('tpPrev').onclick=()=>{if(TPPAGE>1){TPPAGE--;renderTopContent();}};
   document.getElementById('tpNext').onclick=()=>{TPPAGE++;renderTopContent();};
   document.getElementById('refresh').onclick=()=>loadData(true);

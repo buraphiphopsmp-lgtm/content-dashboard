@@ -94,11 +94,11 @@ function buildPosts(rows) {
 }
 function buildTutors(rows) {
   const h = header(rows);
-  const c = { month: h.exact('Month-Year'), tutor: h.exact('Tutor'), network: h.exact('Network'),
+  const c = { month: h.exact('Month-Year'), tutor: h.exact('Tutor'), profile: h.exact('Profile'), network: h.exact('Network'),
     follower: h.exact('Follower'), growth: h.incl('Follower Growth'),
     posts: h.incl('Number of posts'), eng: h.incl('Reactions'), rate: h.incl('interaction rate') };
   return h.body.map(r => ({
-    month: clean(r[c.month]), tutor: clean(r[c.tutor]), network: normNet(r[c.network]),
+    month: clean(r[c.month]), tutor: clean(r[c.tutor]), profile: clean(r[c.profile]), network: normNet(r[c.network]),
     follower: Math.round(num(r[c.follower])), followerGrowth: Math.round(num(r[c.growth])),
     posts: Math.round(num(r[c.posts])), engagement: Math.round(num(r[c.eng])),
     rate: num(r[c.rate]),

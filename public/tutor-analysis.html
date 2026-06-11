@@ -71,6 +71,7 @@
     <div class="filters">
       <span><label class="fl">เดือน (snapshot)</label><select id="fMonth"></select></span>
       <span><label class="fl">ช่องทาง</label><select id="fNetwork"><option value="">ทุกช่องทาง (รวม)</option></select></span>
+      <span><label class="fl">ดูตาม</label><select id="groupBy"><option value="tutor">Tutor</option><option value="profile">Profile</option></select></span>
       <button id="refresh" class="btn">🔄 รีเฟรชข้อมูล</button>
       <span id="lastUpdate" class="upd"></span>
     </div>
@@ -172,7 +173,8 @@ const months=()=>[...new Set((DATA.tutors||[]).map(r=>r.month))].sort((a,b)=>mon
 
 function aggSnap(rows){
   const m={};
-  rows.forEach(r=>{const k=r.tutor;if(!m[k])m[k]={tutor:k,follower:0,followerGrowth:0,posts:0,engagement:0,rw:0};
+  const gk=v('groupBy')||'tutor';
+  rows.forEach(r=>{const k=r[gk]||'(ไม่ระบุ)';if(!m[k])m[k]={tutor:k,follower:0,followerGrowth:0,posts:0,engagement:0,rw:0};
     m[k].follower+=r.follower;m[k].followerGrowth+=r.followerGrowth;m[k].posts+=r.posts;m[k].engagement+=r.engagement;m[k].rw+=(r.rate||0)*r.posts;});
   return Object.values(m).map(t=>({...t,rate:t.posts?+(t.rw/t.posts).toFixed(2):0}));
 }
@@ -193,6 +195,7 @@ function lineChart(id,labels,datasets){
 function scope(){const fm=v('fMonth'),fn=v('fNetwork');return (DATA.tutors||[]).filter(r=>r.month===fm&&(!fn||r.network===fn));}
 
 function render(){
+  document.querySelector('#tbl thead th[data-s="tutor"]').textContent=(v('groupBy')==='profile'?'Profile':'Tutor');
   const agg=aggSnap(scope());
   const top=k=>agg.slice().sort((a,b)=>b[k]-a[k])[0];
   const tF=top('follower'),tG=top('followerGrowth'),tE=top('engagement'),tP=top('posts');
@@ -214,10 +217,10 @@ function render(){
   renderTrend(); renderTable(agg);
 }
 function renderTrend(){
-  const mkey=v('trendMetric'),fn=v('fNetwork'),ms=months();
-  const tutors=[...new Set((DATA.tutors||[]).map(r=>r.tutor))];
+  const mkey=v('trendMetric'),fn=v('fNetwork'),gk=v('groupBy')||'tutor',ms=months();
+  const tutors=[...new Set((DATA.tutors||[]).map(r=>r[gk]))];
   const datasets=tutors.map(t=>({label:t,borderColor:tutorColor(t),backgroundColor:tutorColor(t),tension:.3,pointRadius:3,borderWidth:t===ME?3:1.5,
-    data:ms.map(m=>(DATA.tutors||[]).filter(r=>r.tutor===t&&r.month===m&&(!fn||r.network===fn)).reduce((s,r)=>s+(r[mkey]||0),0))}));
+    data:ms.map(m=>(DATA.tutors||[]).filter(r=>r[gk]===t&&r.month===m&&(!fn||r.network===fn)).reduce((s,r)=>s+(r[mkey]||0),0))}));
   lineChart('cTrend',ms,datasets);
 }
 function renderChannel(){
@@ -278,7 +281,8 @@ function loadData(fresh){
   return fetch('content-data.json?'+(fresh?'fresh=1&':'')+Date.now()).then(r=>r.json()).then(d=>{
     DATA=d;
     const tutors=[...new Set((DATA.tutors||[]).map(r=>r.tutor))];
-    let pi=0; tutors.forEach(t=>{if(t!==ME)TCOL[t]=PALETTE[pi++%PALETTE.length];});
+    const keys=[...new Set((DATA.tutors||[]).flatMap(r=>[r.tutor,r.profile]).filter(Boolean))];
+    let pi=0; keys.forEach(t=>{if(t!==ME)TCOL[t]=PALETTE[pi++%PALETTE.length];});
     setSub();
     if(!document.querySelector('#fMonth option')){
       const ms=months();
@@ -296,7 +300,7 @@ function loadData(fresh){
 loadData(false).then(()=>{
   document.getElementById('foot').textContent='ข้อมูลติวเตอร์ดึงสดจาก Google Sheet (แท็บ Raw data by Tutor Platform) · P\'Pan = แบรนด์เรา';
   if(!(DATA.tutors||[]).length) document.getElementById('sub').textContent='ยังไม่มีข้อมูล Tutor — ตรวจสิทธิ์ชีต/แท็บ';
-  ['fMonth','fNetwork','trendMetric'].forEach(id=>document.getElementById(id).onchange=render);
+  ['fMonth','fNetwork','trendMetric','groupBy'].forEach(id=>document.getElementById(id).onchange=render);
   ['chTutor','chMetric'].forEach(id=>document.getElementById(id).onchange=renderChannel);
   document.getElementById('trendMetric').onchange=()=>{render();};
   ['tpTutor','tpNet','tpFrom','tpTo','tpSort','tpDir'].forEach(id=>document.getElementById(id).onchange=()=>{TPPAGE=1;renderTopContent();});

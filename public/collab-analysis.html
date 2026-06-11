@@ -181,7 +181,7 @@ function bar(id,labels,data,colors,fmtFn,cmp,labA,labB){
   charts[id]=new Chart(cv,{type:'bar',
     data:{labels,datasets:ds},
     options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:hasC?46:22}},scales:{y:{suggestedMax:Math.max(1,...all)*(hasC?1.3:1.18),ticks:{callback:fmtFn}}},
-      plugins:{legend:{display:hasC,labels:{boxWidth:12,color:'#e7eaf0'}},
+      plugins:{legend:{display:hasC,labels:{boxWidth:12,color:'#ffffff'}},
         datalabels:{clamp:true,color:'#cdd6e6',anchor:'end',align:'top',rotation:hasC?-90:0,font:{weight:'600',size:hasC?9:11},formatter:x=>x>0?fmtFn(x):''}}}});
 }
 function render(){
@@ -221,7 +221,7 @@ function renderTrend(){
   if(charts.cTrend)charts.cTrend.destroy();
   charts.cTrend=new Chart(document.getElementById('cTrend'),{type:'line',data:{labels:ms,datasets},
     options:{responsive:true,interaction:{mode:'index',intersect:false},scales:{y:{ticks:{callback:idx?(x=>x+'%'):fmt}}},
-      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#e7eaf0'}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+(idx?c.parsed.y+'%':fmt(c.parsed.y))}},datalabels:{display:false}}}});
+      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#ffffff'}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+(idx?c.parsed.y+'%':fmt(c.parsed.y))}},datalabels:{display:false}}}});
 }
 function renderTable(a){
   const arr=a.slice().sort((x,y)=> sortKey==='tutor'?(x.tutor>y.tutor?sortDir:x.tutor<y.tutor?-sortDir:0):(x[sortKey]-y[sortKey])*sortDir);

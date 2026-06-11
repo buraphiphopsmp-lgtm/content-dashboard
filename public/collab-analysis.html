@@ -71,6 +71,8 @@
     <div class="filters">
       <span><label class="fl">เดือน</label><select id="fMonth"><option value="">ทั้งหมด (รวม)</option></select></span>
       <span><label class="fl">เทียบกับ</label><select id="fCompare"><option value="">—</option></select></span>
+      <span><label class="fl">เทรนด์แสดง</label><select id="trendMetric">
+        <option value="engagement">Engagement</option><option value="impressions">Impressions</option><option value="posts">จำนวนโพสต์</option><option value="reachPerPost">Reach/post</option><option value="idx">📈 % เติบโต (ดัชนีฐาน 100)</option></select></span>
       <button id="refresh" class="btn">🔄 รีเฟรชข้อมูล</button>
       <span id="lastUpdate" class="upd"></span>
     </div>
@@ -93,7 +95,7 @@
   <div class="card">
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px">
       <h3 style="margin:0">📈 แนวโน้มรายเดือน — เทียบ Collab รายติวเตอร์</h3>
-      <span><label class="fl">แสดง</label><select id="trendMetric">
+      <span><label class="fl">แสดง</label><select id="trendMetric2">
         <option value="engagement">Engagement</option><option value="impressions">Impressions</option><option value="posts">จำนวนโพสต์</option><option value="reachPerPost">Reach/post</option><option value="idx">📈 % เติบโต (ดัชนีฐาน 100)</option></select></span>
     </div>
     <canvas id="cTrend" style="max-height:340px"></canvas>
@@ -204,7 +206,7 @@ function render(){
   renderTrend(); renderTable(a);
 }
 function renderTrend(){
-  const sel=v('trendMetric'),ms=months();
+  const sel=v('trendMetric2'),ms=months();
   const idx=sel==='idx', mkey=idx?'engagement':sel;
   const tutors=[...new Set((DATA.collab||[]).map(r=>r.tutor))];
   const datasets=tutors.map(t=>{
@@ -288,7 +290,9 @@ function loadData(fresh){
 loadData(false).then(()=>{
   document.getElementById('foot').textContent='ข้อมูล IG Collab Post ดึงสดจาก Google Sheet';
   if(!(DATA.collab||[]).length) document.getElementById('sub').textContent='ยังไม่มีข้อมูล Collab — ตรวจสิทธิ์ชีต/แท็บ';
-  ['fMonth','fCompare','trendMetric'].forEach(id=>document.getElementById(id).onchange=render);
+  ['fMonth','fCompare'].forEach(id=>document.getElementById(id).onchange=render);
+  document.getElementById('trendMetric').onchange=()=>{document.getElementById('trendMetric2').value=v('trendMetric');renderTrend();};
+  document.getElementById('trendMetric2').onchange=()=>{document.getElementById('trendMetric').value=v('trendMetric2');renderTrend();};
   ['cpCollab','cpAFrom','cpATo','cpBFrom','cpBTo','cpSort','cpDir'].forEach(id=>document.getElementById(id).onchange=()=>{CPPAGE=1;renderCollabPosts();});
   document.getElementById('cpPrev').onclick=()=>{if(CPPAGE>1){CPPAGE--;renderCollabPosts();}};
   document.getElementById('cpNext').onclick=()=>{CPPAGE++;renderCollabPosts();};

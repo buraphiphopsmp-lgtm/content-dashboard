@@ -168,7 +168,16 @@
 </div>
 
 <script>
-const PLAT_COLORS={Facebook:'#1877F2',Instagram:'#E4405F',TikTok:'#25F4EE',X:'#E7E9EA',YouTube:'#FF0000'};
+const PLAT_COLORS={Facebook:'#1877F2',Instagram:'#C13584',TikTok:'#25F4EE',X:'#E7E9EA',YouTube:'#FF0000'};
+const PLAT_GRAD={Instagram:['#833AB4','#C13584','#FD1D1D'],TikTok:['#00F2FE','#25F4EE','#FE0979']};
+function platFill(plat,c,horizontal){
+  const stops=PLAT_GRAD[plat], area=c.chart.chartArea;
+  if(!stops||!area) return PLAT_COLORS[plat]||'#5b8cff';
+  const g=horizontal?c.chart.ctx.createLinearGradient(area.left,0,area.right,0)
+                     :c.chart.ctx.createLinearGradient(0,area.bottom,0,area.top);
+  stops.forEach((col,i)=>g.addColorStop(i/(stops.length-1),col));
+  return g;
+}
 const PALETTE=['#5b8cff','#E4405F','#f5a524','#9b8cff','#25F4EE','#ff7a59','#7ee787'];
 const ME="P'Pan";
 const fmt=n=>Math.abs(n)>=1e6?(n/1e6).toFixed(2)+'M':Math.abs(n)>=1e3?(n/1e3).toFixed(1)+'K':Math.round(n).toLocaleString();
@@ -282,7 +291,7 @@ function renderChannel(){
     if(idx){const base=s.find(x=>x>0)||1; s=s.map(x=>x?+(x/base*100).toFixed(1):null);}
     return {n,s};
   });
-  const datasets=series.map(o=>({type:'bar',label:o.n,backgroundColor:PLAT_COLORS[o.n]||'#888',borderRadius:4,data:o.s}));
+  const datasets=series.map(o=>({type:'bar',label:o.n,backgroundColor:c=>platFill(o.n,c,false),borderRadius:4,data:o.s}));
   const avg=ms.map((m,i)=>{const vals=series.map(o=>o.s[i]).filter(x=>x!=null);return vals.length?+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(idx?1:0):null;});
   datasets.push({type:'line',label:'เฉลี่ย (แนวโน้ม)',data:avg,borderColor:'#ffd166',backgroundColor:'#ffd166',borderWidth:2.5,borderDash:[6,4],pointRadius:3,tension:.3,order:-1});
   const yf=idx?(x=>x+'%'):fmt;
@@ -291,7 +300,7 @@ function renderChannel(){
   charts.cChannel=new Chart(document.getElementById('cChannel'),{type:'bar',data:{labels:ms,datasets},
     options:{responsive:true,interaction:{mode:'index',intersect:false},layout:{padding:{top:42}},
       scales:{y:{suggestedMax:mx*1.22,ticks:{callback:yf}}},
-      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#e7eaf0'}},
+      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#e7eaf0',generateLabels:ch=>ch.data.datasets.map((d,i)=>({text:d.label,fillStyle:d.type==='line'?d.borderColor:(PLAT_COLORS[d.label]||'#888'),strokeStyle:d.type==='line'?d.borderColor:(PLAT_COLORS[d.label]||'#888'),pointStyle:d.type==='line'?'line':'rectRounded',hidden:!ch.isDatasetVisible(i),datasetIndex:i}))}},
         tooltip:{callbacks:{label:c=>c.dataset.label+': '+yf(c.parsed.y)}},
         datalabels:{display:c=>c.dataset.type!=='line',clamp:true,color:'#cdd6e6',anchor:'end',align:'top',rotation:-90,font:{weight:'600',size:9},formatter:x=>x>0?yf(x):''}}}});
 }

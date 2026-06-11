@@ -167,7 +167,16 @@
 </div>
 
 <script>
-const PLAT_COLORS={Facebook:'#1877F2',Instagram:'#E4405F',TikTok:'#25F4EE',X:'#E7E9EA',YouTube:'#FF0000'};
+const PLAT_COLORS={Facebook:'#1877F2',Instagram:'#C13584',TikTok:'#25F4EE',X:'#E7E9EA',YouTube:'#FF0000'};
+const PLAT_GRAD={Instagram:['#833AB4','#C13584','#FD1D1D'],TikTok:['#00F2FE','#25F4EE','#FE0979']};
+function platFill(plat,c,horizontal){
+  const stops=PLAT_GRAD[plat], area=c.chart.chartArea;
+  if(!stops||!area) return PLAT_COLORS[plat]||'#5b8cff';
+  const g=horizontal?c.chart.ctx.createLinearGradient(area.left,0,area.right,0)
+                     :c.chart.ctx.createLinearGradient(0,area.bottom,0,area.top);
+  stops.forEach((col,i)=>g.addColorStop(i/(stops.length-1),col));
+  return g;
+}
 const fmt=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':Math.round(n).toLocaleString();
 const pct=n=>(n*100).toFixed(2)+'%';
 const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -239,15 +248,15 @@ function renderCharts(){
   const fp=platVal();
   const pilNames=byEng.map(p=>p.pillar);
   const nets=[...new Set((DATA.posts||[]).map(p=>p.network))].filter(n=>!fp||n===fp);
-  const ds=nets.map(n=>({label:n,stack:'p',backgroundColor:PLAT_COLORS[n]||'#888',data:pilNames.map(pn=>engPN(A,pn,n))}));
+  const ds=nets.map(n=>({label:n,stack:'p',backgroundColor:c=>platFill(n,c,false),data:pilNames.map(pn=>engPN(A,pn,n))}));
   if(B)nets.forEach(n=>ds.push({label:n,stack:'c',backgroundColor:(PLAT_COLORS[n]||'#888')+'66',data:pilNames.map(pn=>engPN(B,pn,n))}));
   if(charts.cStack)charts.cStack.destroy();
   charts.cStack=new Chart(document.getElementById('cStack'),{type:'bar',
     data:{labels:pilNames,datasets:ds},
     options:{responsive:true,scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:fmt}}},
-      plugins:{legend:{position:'top',labels:{filter:(it)=>!B||(ds[it.datasetIndex]&&ds[it.datasetIndex].stack==='p')},
+      plugins:{legend:{position:'top',labels:{generateLabels:ch=>nets.map((n,i)=>({text:n,fillStyle:PLAT_COLORS[n]||'#888',strokeStyle:PLAT_COLORS[n]||'#888',hidden:!ch.isDatasetVisible(i),datasetIndex:i})),filter:(it)=>!B||(ds[it.datasetIndex]&&ds[it.datasetIndex].stack==='p')},
         onClick:(e,item,legend)=>{const ch=legend.chart,lb=item.text,vis=ch.isDatasetVisible(item.datasetIndex);ch.data.datasets.forEach((d,i)=>{if(d.label===lb)ch.setDatasetVisibility(i,!vis);});ch.update();}},
-        datalabels:{display:'auto',clamp:true,color:c=>contrast(c.dataset.backgroundColor),anchor:'center',align:'center',font:{weight:'700',size:9},formatter:x=>x>0?fmt(x):''},
+        datalabels:{display:'auto',clamp:true,color:c=>contrast(PLAT_COLORS[c.dataset.label]||'#888'),anchor:'center',align:'center',font:{weight:'700',size:9},formatter:x=>x>0?fmt(x):''},
         tooltip:{callbacks:{label:c=>`${c.dataset.label} (${c.dataset.stack==='c'?labB:labA}): ${fmt(c.parsed.y)}`}}}}});
 
   renderPillarTable(pilA,cmpMap,labA,labB);

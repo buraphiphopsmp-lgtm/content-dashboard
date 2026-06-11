@@ -38,6 +38,9 @@
   .cscroll{overflow-x:auto;overflow-y:hidden}
   .cbox{min-width:100%;height:300px;position:relative}
   .cbox canvas{max-height:none!important}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+  .chip{display:inline-flex;align-items:center;gap:5px;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer}
+  .chip input{accent-color:var(--accent);margin:0}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
   th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
@@ -102,6 +105,7 @@
         <option value="follower">ยอด Follower (สะสม)</option><option value="followerGrowth">Follower Growth (รายเดือน)</option>
         <option value="engagement">Engagement</option><option value="idx">📈 % เติบโต (ดัชนีฐาน 100)</option></select></div>
     </div>
+    <div class="chips" id="trendChips"></div>
     <canvas id="cTrend" style="max-height:340px"></canvas>
   </div>
 
@@ -234,10 +238,18 @@ function render(){
 
   renderTrend(); renderTable(agg);
 }
+function buildTrendChips(){
+  const gk=v('groupBy')||'tutor';
+  const vals=[...new Set((DATA.tutors||[]).map(r=>r[gk]).filter(Boolean))];
+  document.getElementById('trendChips').innerHTML='<span class="fl" style="margin-right:2px">เลือกแสดง:</span>'+vals.map(t=>`<label class="chip"><input type="checkbox" value="${t}">${t}</label>`).join('');
+  document.querySelectorAll('#trendChips input').forEach(i=>i.onchange=renderTrend);
+}
 function renderTrend(){
   const sel=v('trendMetric'),fn=v('fNetwork'),gk=v('groupBy')||'tutor',ms=months();
   const idx=sel==='idx', mkey=idx?'follower':sel;
-  const tutors=[...new Set((DATA.tutors||[]).map(r=>r[gk]))];
+  const allT=[...new Set((DATA.tutors||[]).map(r=>r[gk]))];
+  const checked=[...document.querySelectorAll('#trendChips input:checked')].map(i=>i.value);
+  const tutors=checked.length?allT.filter(t=>checked.includes(t)):allT;
   const series=tutors.map(t=>{
     let s=ms.map(m=>(DATA.tutors||[]).filter(r=>r[gk]===t&&r.month===m&&(!fn||r.network===fn)).reduce((a,r)=>a+(r[mkey]||0),0));
     if(idx){const base=s.find(x=>x>0)||1; s=s.map(x=>x?+(x/base*100).toFixed(1):null);}
@@ -258,12 +270,20 @@ function renderChannel(){
   const idx=sel==='idx', mkey=idx?'follower':sel;
   const rows=(DATA.tutors||[]).filter(r=>r.tutor===tutor);
   const nets=[...new Set(rows.map(r=>r.network))];
-  const datasets=nets.map(n=>{
+  const series=nets.map(n=>{
     let s=ms.map(m=>rows.filter(r=>r.network===n&&r.month===m).reduce((a,r)=>a+(r[mkey]||0),0));
     if(idx){const base=s.find(x=>x>0)||1; s=s.map(x=>x?+(x/base*100).toFixed(1):null);}
-    return {label:n,borderColor:PLAT_COLORS[n]||'#888',backgroundColor:PLAT_COLORS[n]||'#888',tension:.3,pointRadius:3,data:s};
+    return {n,s};
   });
-  lineChart('cChannel',ms,datasets, idx?(x=>x+'%'):fmt);
+  const datasets=series.map(o=>({type:'bar',label:o.n,backgroundColor:PLAT_COLORS[o.n]||'#888',borderRadius:4,data:o.s}));
+  const avg=ms.map((m,i)=>{const vals=series.map(o=>o.s[i]).filter(x=>x!=null);return vals.length?+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(idx?1:0):null;});
+  datasets.push({type:'line',label:'เฉลี่ย (แนวโน้ม)',data:avg,borderColor:'#ffd166',backgroundColor:'#ffd166',borderWidth:2.5,borderDash:[6,4],pointRadius:3,tension:.3,order:-1});
+  const yf=idx?(x=>x+'%'):fmt;
+  if(charts.cChannel)charts.cChannel.destroy();
+  charts.cChannel=new Chart(document.getElementById('cChannel'),{type:'bar',data:{labels:ms,datasets},
+    options:{responsive:true,interaction:{mode:'index',intersect:false},layout:{padding:{top:8}},scales:{y:{ticks:{callback:yf}}},
+      plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#e7eaf0'}},
+        tooltip:{callbacks:{label:c=>c.dataset.label+': '+yf(c.parsed.y)}},datalabels:{display:false}}}});
 }
 function renderTable(agg){
   const arr=agg.slice().sort((a,b)=> sortKey==='tutor'?(a.tutor>b.tutor?sortDir:a.tutor<b.tutor?-sortDir:0):(a[sortKey]-b[sortKey])*sortDir);
@@ -335,6 +355,7 @@ function loadData(fresh){
       ms.forEach(m=>document.getElementById('fCompare').innerHTML+=`<option>${m}</option>`);
       [...new Set((DATA.tutors||[]).map(r=>r.network))].forEach(n=>document.getElementById('fNetwork').innerHTML+=`<option>${n}</option>`);
       tutors.sort((a,b)=>a===ME?-1:b===ME?1:0).forEach(t=>document.getElementById('chTutor').innerHTML+=`<option>${t}</option>`);
+      buildTrendChips();
       [...new Set((DATA.tutorPosts||[]).map(p=>p.tutor))].forEach(t=>document.getElementById('tpTutor').innerHTML+=`<option>${t}</option>`);
       [...new Set((DATA.tutorPosts||[]).map(p=>p.network))].forEach(n=>document.getElementById('tpNet').innerHTML+=`<option>${n}</option>`);
     }
@@ -345,7 +366,8 @@ function loadData(fresh){
 loadData(false).then(()=>{
   document.getElementById('foot').textContent='ข้อมูลติวเตอร์ดึงสดจาก Google Sheet (แท็บ Raw data by Tutor Platform) · P\'Pan = แบรนด์เรา';
   if(!(DATA.tutors||[]).length) document.getElementById('sub').textContent='ยังไม่มีข้อมูล Tutor — ตรวจสิทธิ์ชีต/แท็บ';
-  ['fMonth','fCompare','fNetwork','trendMetric','groupBy'].forEach(id=>document.getElementById(id).onchange=render);
+  ['fMonth','fCompare','fNetwork','trendMetric'].forEach(id=>document.getElementById(id).onchange=render);
+  document.getElementById('groupBy').onchange=()=>{buildTrendChips();render();};
   ['chTutor','chMetric'].forEach(id=>document.getElementById(id).onchange=renderChannel);
   document.getElementById('trendMetric').onchange=()=>{render();};
   ['tpTutor','tpNet','tpAFrom','tpATo','tpBFrom','tpBTo','tpSort','tpDir'].forEach(id=>document.getElementById(id).onchange=()=>{TPPAGE=1;renderTopContent();});

@@ -66,7 +66,7 @@ function header(rows) {
 }
 function buildSummary(rows) {
   const h = header(rows);
-  const c = { month: h.exact('Month'), platform: h.exact('Platform'), pillar: h.exact('Profile'),
+  const c = { month: h.exact('Month-Year'), platform: h.exact('Platform'), pillar: h.exact('Profile'),
     reactions: h.incl('Reactions'), impressions: h.exact('Impressions/views of posts'),
     posts: h.incl('Number of posts') };
   return h.body.map(r => ({

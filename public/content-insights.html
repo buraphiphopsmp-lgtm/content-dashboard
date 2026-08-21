@@ -246,6 +246,15 @@ function analyse(posts,winDays){
   const rate=o=>o.imp?+(o.eng/o.imp*100).toFixed(2):0;
   const tA=sum(A),tB=sum(B);
 
+  // กรอบสั้นไวต่อโพสต์ไวรัลชิ้นเดียวมาก — คิดผลต่างแบบตัดโพสต์แรงสุดของทั้งสองช่วงออกไว้เทียบด้วย
+  const maxOf=arr=>arr.reduce((m,p)=>Math.max(m,p.engagement),0);
+  const maxA=maxOf(A),maxB=maxOf(B);
+  const robust={maxA,maxB,
+    topShareA:tA.eng?Math.round(maxA/tA.eng*100):0,
+    topShareB:tB.eng?Math.round(maxB/tB.eng*100):0,
+    dEng:tB.eng?Math.round((tA.eng-tB.eng)/tB.eng*100):null,
+    dEngExTop:(tB.eng-maxB)?Math.round(((tA.eng-maxA)-(tB.eng-maxB))/(tB.eng-maxB)*100):null};
+
   // --- แยกตามช่อง ---
   const nets=[...new Set(P.map(p=>p.network).filter(Boolean))];
   const grp=(arr,k,v)=>arr.filter(p=>p[k]===v);
@@ -305,7 +314,7 @@ function analyse(posts,winDays){
   return{winDays,latest,today,lag,
     range:{aFrom,aTo,bFrom,bTo,
            label:thDate(aFrom)+'–'+thDate(aTo), priorLabel:thDate(bFrom)+'–'+thDate(bTo)},
-    tot:{A:tA,B:tB,rateA:rate(tA),rateB:rate(tB)},
+    tot:{A:tA,B:tB,rateA:rate(tA),rateB:rate(tB)},robust,
     effort,platCmp,pillarCmp,combos,daily,ma,dow,dowDays,
     top:sorted.slice(0,8),t10n:t10.length,t10net:tally(t10,'network'),t10pil:tally(t10,'pillar'),allPil:tally(A,'pillar'),
     nA:A.length,nB:B.length};
@@ -359,6 +368,20 @@ function buildRecs(s){
     act:'ขอข้อมูลยอดสมัคร/คลิกลิงก์มาผูกกับโพสต์กลุ่มนี้ก่อนตัดสินใจ · <b>ไม่ควรลดแรงโดยดูตัวเลขในหน้านี้อย่างเดียว</b>'});
 
   return out;
+}
+
+/* บอกว่าตัวเลข % ที่เห็นถูกโพสต์ไวรัลชิ้นเดียวดึงไปแค่ไหน — สำคัญมากเมื่อกรอบสั้น */
+function robustLine(s){
+  const r=s.robust||{};
+  const base=`<br>• กรอบยิ่งสั้น <b>โพสต์ไวรัลชิ้นเดียวยิ่งดึงตัวเลขได้มาก</b> — โพสต์แรงสุดช่วงนี้ ${nf(r.maxA||0)} engagement (คิดเป็น ${r.topShareA||0}% ของทั้งช่วง)`;
+  if(r.dEng==null||r.dEngExTop==null) return base+' จึงควรดูค่ากลางคู่เสมอ';
+  const gap=Math.abs(r.dEng-r.dEngExTop);
+  const verdict = gap>=10
+    ? `<b>ส่วนหนึ่งของตัวเลขนี้มาจากโพสต์ไม่กี่ชิ้น</b> ถ้าจะสรุปแนวโน้มจริง ให้ยึดตัวเลขที่ตัดโพสต์แรงสุดออก หรือขยายกรอบเวลา`
+    : `<b>แนวโน้มนี้ไม่ได้มาจากโพสต์ชิ้นเดียว</b> — ตัดออกแล้วผลยังไปทางเดิม`;
+  return base+
+    `<br>• Engagement เปลี่ยน <b>${r.dEng>0?'+':''}${r.dEng}%</b> · แต่ถ้า<b>ตัดโพสต์แรงสุดของทั้งสองช่วงออก</b> จะเป็น <b>${r.dEngExTop>0?'+':''}${r.dEngExTop}%</b> `+
+    `(โพสต์แรงสุดของช่วงเทียบคิดเป็น ${r.topShareB||0}% ของฐาน) → ${verdict}`;
 }
 
 /* ================= render ================= */
@@ -506,7 +529,7 @@ function render(){
   /* caveat */
   document.getElementById('caveat').innerHTML=`<b>ข้อควรระวังในการอ่าน:</b>
     <br>• กรอบ ${W} วันมี <b>${nf(s.nA)} โพสต์</b> (ช่วงเทียบ ${nf(s.nB)}) — ${s.nA<80?'<b>ค่อนข้างน้อย ตัวเลข % จะแกว่งแรง</b> ถ้าจะตัดสินใจเรื่องใหญ่ แนะนำสลับไปกรอบ 30–90 วันก่อน':'พอสำหรับดูภาพระดับแพลตฟอร์ม แต่ระดับ pillar × ช่อง ยังแกว่งได้'}
-    <br>• กรอบยิ่งสั้น <b>โพสต์ไวรัลชิ้นเดียวยิ่งดึงค่าเฉลี่ยได้มาก</b> — โพสต์แรงสุดในช่วงนี้อยู่ที่ ${nf((s.top[0]||{}).engagement||0)} engagement จึงควรดูค่ากลางคู่เสมอ
+    ${robustLine(s)}
     <br>• วันในสัปดาห์ใช้กรอบ ${s.dowDays} วันเสมอ ไม่ตามกรอบที่เลือก เพราะ 7 วันต้องการตัวอย่างมากกว่านี้
     <br>• ตัวเลขทั้งหน้าคิดจาก<b>ข้อมูลรายโพสต์</b> จึงอาจต่างจากหน้าภาพรวมเล็กน้อย (หน้านั้นใช้ยอดสรุปรายเดือนจากอีกแท็บ)
     <br>• ข้อมูลนี้บอกได้แค่ <b>engagement</b> ยังไม่ได้ผูกกับยอดสมัครเรียนจริง — คอนเทนต์ที่ engagement ต่ำอาจยังขายได้ดี ควรดูคู่กับข้อมูลยอดขายก่อนลดแรง`;

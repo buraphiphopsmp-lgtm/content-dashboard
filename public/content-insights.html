@@ -21,15 +21,20 @@
   .nav{display:flex;gap:8px;flex-wrap:wrap}
   .nav a{padding:8px 16px;border-radius:10px;border:1px solid var(--line);color:var(--muted);background:var(--card);font-weight:600;font-size:13px;text-decoration:none}
   .nav a.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .subbar{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px}
-  .sub{color:var(--muted);font-size:13px}
+  .subbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .sub{color:var(--muted);font-size:13px;line-height:1.6}
+  .ctrl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  label.fl{color:var(--muted);font-size:12px}
+  select{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit}
   .btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
   .btn:hover{filter:brightness(1.1)} .btn:disabled{opacity:.6;cursor:default}
   .upd{display:inline-flex;align-items:center;gap:4px;background:rgba(39,196,166,.12);color:var(--accent2);
        border:1px solid rgba(39,196,166,.35);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:600;white-space:nowrap}
+  .lagwarn{background:rgba(255,169,64,.1);border:1px solid rgba(255,169,64,.35);color:#ffd9a6;
+           border-radius:10px;padding:10px 14px;font-size:12.5px;margin-bottom:16px;line-height:1.6}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
   .card h3{margin:0 0 4px;font-size:16px;font-weight:700}
-  .card .hint{color:var(--muted);font-size:12px;margin:0 0 14px;line-height:1.5}
+  .card .hint{color:var(--muted);font-size:12px;margin:0 0 14px;line-height:1.55}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
   .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
@@ -53,6 +58,7 @@
   .pill.fb{background:rgba(24,119,242,.18);color:#5fa4ff}
   .pill.x{background:rgba(255,255,255,.12);color:#dfe4ee}
   .pill.yt{background:rgba(255,0,0,.15);color:#ff6b6b}
+  .thin{font-size:10px;color:var(--warn);margin-left:5px;font-weight:700}
   .rec{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;background:var(--card2)}
   .rec .head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
   .rec .title{font-weight:700;font-size:15px}
@@ -94,22 +100,31 @@
 
   <div class="subbar">
     <div class="sub" id="sub">กำลังโหลดข้อมูล…</div>
-    <div>
+    <div class="ctrl">
+      <label class="fl">กรอบเวลา</label>
+      <select id="fWin">
+        <option value="15" selected>15 วันล่าสุด</option>
+        <option value="30">30 วันล่าสุด</option>
+        <option value="60">60 วันล่าสุด</option>
+        <option value="90">90 วันล่าสุด</option>
+      </select>
       <button id="refresh" class="btn">🔄 รีเฟรชข้อมูล</button>
       <span id="lastUpdate" class="upd"></span>
     </div>
   </div>
 
+  <div class="lagwarn" id="lag" style="display:none"></div>
+
   <div class="kpis" id="kpis"></div>
 
   <div class="grid2">
     <div class="card">
-      <h3>เทรนด์รายเดือน — Engagement &amp; Rate</h3>
+      <h3>Engagement รายวัน</h3>
       <p class="hint" id="hTrend">—</p>
       <div class="chartbox"><canvas id="cTrend"></canvas></div>
     </div>
     <div class="card">
-      <h3>Engagement Rate รายแพลตฟอร์ม</h3>
+      <h3>Engagement Rate ต่อแพลตฟอร์ม — เทียบสองช่วง</h3>
       <p class="hint" id="hPlat">—</p>
       <div class="chartbox"><canvas id="cPlatRate"></canvas></div>
     </div>
@@ -187,24 +202,23 @@
 
 <script>
 /* ================= helpers ================= */
-const MO3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const TH =['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const DW =['อา','จ','อ','พ','พฤ','ศ','ส'];                                    // ย่อ — ใช้บนแกนกราฟ
 const DWF=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];   // เต็ม — ใช้ในประโยค
 const NETC={TikTok:'#25F4EE',Instagram:'#C13584',Facebook:'#1877F2',X:'#8b93a3',YouTube:'#FF0000'};
 const CLS ={TikTok:'tk',Instagram:'ig',Facebook:'fb',X:'x',YouTube:'yt'};
-const pad=n=>String(n).padStart(2,'0');
+const DOW_MIN_DAYS=90;   // วันในสัปดาห์ต้องใช้กรอบยาว ไม่งั้นเหลือ ~2 ตัวอย่าง/วัน
+const TREND_DAYS=60;     // กราฟรายวันย้อนหลัง
+const MIN_N=5;           // combo ต้องมีอย่างน้อยกี่โพสต์ถึงจะเอามาเทียบ
+
 const fmt=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(0)+'K':Math.round(n).toLocaleString();
 const nf =n=>Math.round(n).toLocaleString();
 const med=a=>{if(!a.length)return 0;const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;
               return s.length%2?s[m]:Math.round((s[m-1]+s[m])/2);};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-// ชื่อเดือนในชีตไม่สม่ำเสมอ (May / June / August) จึงตัด 3 ตัวแรกมาเทียบ
-function parseMonth(s){const m=/^([A-Za-z]+)\s+(\d{4})$/.exec(String(s||'').trim());if(!m)return null;
-  const i=MO3.indexOf(m[1].slice(0,3));if(i<0)return null;return{i,y:+m[2],key:(+m[2])*12+i,raw:s};}
-const thLabel=p=>TH[p.i]+' '+String(p.y).slice(2);
-const monthStart=p=>`${p.y}-${pad(p.i+1)}-01`;
-const monthEnd  =p=>{const y=p.i===11?p.y+1:p.y,i=p.i===11?0:p.i+1;return `${y}-${pad(i+1)}-01`;};
+const addDays=(iso,n)=>{const t=new Date(iso+'T00:00:00Z');t.setUTCDate(t.getUTCDate()+n);return t.toISOString().slice(0,10);};
+const dayDiff=(a,b)=>Math.round((new Date(a+'T00:00:00Z')-new Date(b+'T00:00:00Z'))/864e5);
+const thDate=iso=>{const p=iso.split('-');return (+p[2])+' '+TH[+p[1]-1];};
 
 let DATA={},ST={},charts={};
 Chart.register(ChartDataLabels);
@@ -213,121 +227,135 @@ Chart.defaults.font.family="'Segoe UI',Tahoma,'Sarabun',sans-serif";
 Chart.defaults.plugins.datalabels.display=false;
 function mkChart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg);}
 
-/* ================= การคำนวณทั้งหมด ================= */
-function analyse(summary,posts){
-  const S=summary||[],P=(posts||[]).filter(p=>p.date&&/^\d{4}-\d{2}-\d{2}$/.test(p.date));
+/* ================= การคำนวณ (ใช้ข้อมูลระดับโพสต์ล้วน จึงอิงวันจริง ไม่อิงเดือน) ================= */
+function analyse(posts,winDays){
+  const P=(posts||[]).filter(p=>/^\d{4}-\d{2}-\d{2}$/.test(p.date||''));
+  if(!P.length) return null;
 
-  // --- เดือนทั้งหมด เรียงตามเวลา + ตัดเดือนที่ยังไม่จบออกจากการเปรียบเทียบ ---
-  const seen={};S.forEach(r=>{const p=parseMonth(r.month);if(p)seen[p.key]=p;});
-  const months=Object.values(seen).sort((a,b)=>a.key-b.key);
-  const now=new Date(),curKey=now.getFullYear()*12+now.getMonth();
-  const last=months[months.length-1];
-  const partial=last&&last.key>=curKey?last:null;              // เดือนปัจจุบัน = ยังไม่จบ
-  const done=partial?months.slice(0,-1):months.slice();
-  const win=Math.min(3,Math.max(1,Math.floor(done.length/2)));  // ขนาดหน้าต่างเทียบ
-  const recent=done.slice(-win), prior=done.slice(-win*2,-win);
-  const rSet=new Set(recent.map(m=>m.raw)), pSet=new Set(prior.map(m=>m.raw));
+  // ยึดจาก "วันล่าสุดที่มีข้อมูลจริง" ไม่ใช่วันนี้ — ชีตมักอัปเดตช้ากว่าปฏิทินอยู่หลายวัน
+  let latest=P[0].date; for(const p of P) if(p.date>latest) latest=p.date;
+  const today=new Date().toISOString().slice(0,10);
+  const lag=Math.max(0,dayDiff(today,latest));
 
-  const agg=rows=>rows.reduce((a,r)=>({imp:a.imp+r.impressions,eng:a.eng+r.reactions,posts:a.posts+r.posts}),{imp:0,eng:0,posts:0});
-  const rate=a=>a.imp?+(a.eng/a.imp*100).toFixed(2):0;
+  const aFrom=addDays(latest,-(winDays-1)), aTo=latest;
+  const bFrom=addDays(latest,-(winDays*2-1)), bTo=addDays(latest,-winDays);
+  const inR=(p,f,t)=>p.date>=f&&p.date<=t;
+  const A=P.filter(p=>inR(p,aFrom,aTo)), B=P.filter(p=>inR(p,bFrom,bTo));
 
-  // --- เทรนด์รายเดือน ---
-  const monthly=months.map(m=>{const a=agg(S.filter(r=>r.month===m.raw));
-    return{label:thLabel(m),partial:partial&&m.key===partial.key,...a,rate:rate(a)};});
+  const sum=arr=>arr.reduce((a,p)=>({eng:a.eng+p.engagement,imp:a.imp+p.impressions,n:a.n+1}),{eng:0,imp:0,n:0});
+  const rate=o=>o.imp?+(o.eng/o.imp*100).toFixed(2):0;
+  const tA=sum(A),tB=sum(B);
 
-  // --- rate รายแพลตฟอร์มต่อเดือน ---
-  const plats=[...new Set(S.map(r=>r.platform))].filter(Boolean);
-  const platRate={};plats.forEach(pl=>{platRate[pl]=months.map(m=>rate(agg(S.filter(r=>r.platform===pl&&r.month===m.raw))));});
+  // --- แยกตามช่อง ---
+  const nets=[...new Set(P.map(p=>p.network).filter(Boolean))];
+  const grp=(arr,k,v)=>arr.filter(p=>p[k]===v);
+  const effort=nets.map(net=>{const g=grp(A,'network',net),s=sum(g);
+    return{net,posts:g.length,eng:s.eng,
+      postShare:A.length?+(g.length/A.length*100).toFixed(1):0,
+      engShare:tA.eng?+(s.eng/tA.eng*100).toFixed(1):0,
+      avgEng:g.length?Math.round(s.eng/g.length):0, med:med(g.map(p=>p.engagement)),
+      rate:rate(s), c:NETC[net]||'#5b8cff'};})
+    .filter(e=>e.posts).sort((a,b)=>b.engShare-a.engShare);
 
-  // --- เทียบช่วง: pillar / platform ---
-  const cmp=dim=>[...new Set(S.map(r=>r[dim]))].filter(Boolean).map(k=>{
-    const A=agg(S.filter(r=>r[dim]===k&&rSet.has(r.month))),B=agg(S.filter(r=>r[dim]===k&&pSet.has(r.month)));
-    return{k,rEng:A.eng,pEng:B.eng,rPosts:A.posts,pPosts:B.posts,rRate:rate(A),pRate:rate(B),
-      dEng:B.eng?Math.round((A.eng-B.eng)/B.eng*100):null,
-      dPosts:B.posts?Math.round((A.posts-B.posts)/B.posts*100):null};
-  }).filter(x=>x.rEng||x.pEng).sort((a,b)=>b.rEng-a.rEng);
+  const platCmp=nets.map(net=>{const a=sum(grp(A,'network',net)),b=sum(grp(B,'network',net));
+    return{k:net,rEng:a.eng,pEng:b.eng,rPosts:a.n,pPosts:b.n,rRate:rate(a),pRate:rate(b),
+      dEng:b.eng?Math.round((a.eng-b.eng)/b.eng*100):null};})
+    .filter(x=>x.rPosts||x.pPosts).sort((a,b)=>b.rEng-a.rEng);
 
-  const A=agg(S.filter(r=>rSet.has(r.month))),B=agg(S.filter(r=>pSet.has(r.month)));
+  // --- แยกตาม pillar ---
+  const pils=[...new Set(P.map(p=>p.pillar).filter(Boolean))];
+  const pillarCmp=pils.map(k=>{const a=sum(grp(A,'pillar',k)),b=sum(grp(B,'pillar',k));
+    return{k,rEng:a.eng,pEng:b.eng,rPosts:a.n,pPosts:b.n,rRate:rate(a),pRate:rate(b),
+      dEng:b.eng?Math.round((a.eng-b.eng)/b.eng*100):null,
+      dPosts:b.n?Math.round((a.n-b.n)/b.n*100):null};})
+    .filter(x=>x.rPosts||x.pPosts).sort((a,b)=>b.rEng-a.rEng);
 
-  // --- ระดับโพสต์ในช่วงล่าสุด ---
-  const from=recent.length?monthStart(recent[0]):'9999',to=recent.length?monthEnd(recent[recent.length-1]):'0000';
-  const R=P.filter(p=>p.date>=from&&p.date<to);
-  const tot=R.length,totEng=R.reduce((s,p)=>s+p.engagement,0);
-
-  const byNet={};R.forEach(p=>{const n=p.network||'(ไม่ระบุ)';(byNet[n]=byNet[n]||{n:0,eng:0,list:[]});
-    byNet[n].n++;byNet[n].eng+=p.engagement;byNet[n].list.push(p.engagement);});
-  const effort=Object.entries(byNet).map(([net,v])=>({net,posts:v.n,
-    postShare:tot?+(v.n/tot*100).toFixed(1):0, engShare:totEng?+(v.eng/totEng*100).toFixed(1):0,
-    avgEng:Math.round(v.eng/v.n), med:med(v.list), c:NETC[net]||'#5b8cff'})).sort((a,b)=>b.engShare-a.engShare);
-
-  const cb={};R.forEach(p=>{const k=(p.pillar||'(ไม่ระบุ)')+' | '+(p.network||'-');
-    (cb[k]=cb[k]||{n:0,eng:0,imp:0});cb[k].n++;cb[k].eng+=p.engagement;cb[k].imp+=p.impressions;});
-  const combos=Object.entries(cb).filter(([,v])=>v.n>=5).map(([k,v])=>{const [pil,net]=k.split(' | ');
-    return{pil,net,posts:v.n,avg:Math.round(v.eng/v.n),rate:v.imp?+(v.eng/v.imp*100).toFixed(2):0};})
+  // --- pillar x ช่อง ---
+  // เก็บ pillar/network ไว้ในค่า ไม่แกะกลับจาก key — ชื่อ pillar มีช่องว่างอยู่แล้ว ("Entertainment - Lifestyle")
+  const cb={};A.forEach(p=>{const pil=p.pillar||"(ไม่ระบุ)",net=p.network||"-",k=pil+"~|~"+net;
+    (cb[k]=cb[k]||{pil,net,n:0,eng:0,imp:0});cb[k].n++;cb[k].eng+=p.engagement;cb[k].imp+=p.impressions;});
+  const combos=Object.values(cb).filter(v=>v.n>=MIN_N)
+    .map(v=>({pil:v.pil,net:v.net,posts:v.n,avg:Math.round(v.eng/v.n),
+              rate:v.imp?+(v.eng/v.imp*100).toFixed(2):0}))
     .sort((a,b)=>b.avg-a.avg);
 
-  const dow=DW.map((d,i)=>{const g=R.filter(p=>new Date(p.date+'T00:00:00Z').getUTCDay()===i);
+  // --- กราฟรายวัน ---
+  const dayMap={};
+  const trFrom=addDays(latest,-(TREND_DAYS-1));
+  P.filter(p=>p.date>=trFrom).forEach(p=>{(dayMap[p.date]=dayMap[p.date]||{eng:0,n:0});dayMap[p.date].eng+=p.engagement;dayMap[p.date].n++;});
+  const daily=[];for(let i=TREND_DAYS-1;i>=0;i--){const d=addDays(latest,-i);
+    daily.push({d,eng:(dayMap[d]||{}).eng||0,n:(dayMap[d]||{}).n||0,inWin:d>=aFrom});}
+  const ma=daily.map((_,i)=>{const s=daily.slice(Math.max(0,i-6),i+1);
+    return Math.round(s.reduce((x,y)=>x+y.eng,0)/s.length);});
+
+  // --- วันในสัปดาห์ (ใช้กรอบยาวกว่าเสมอ เพื่อให้มีตัวอย่างพอ) ---
+  const dowDays=Math.max(winDays,DOW_MIN_DAYS);
+  const dFrom=addDays(latest,-(dowDays-1));
+  const DR=P.filter(p=>p.date>=dFrom&&p.date<=latest);
+  const dow=DW.map((d,i)=>{const g=DR.filter(p=>new Date(p.date+'T00:00:00Z').getUTCDay()===i);
     return{d,full:DWF[i],posts:g.length,med:med(g.map(p=>p.engagement)),
       avg:g.length?Math.round(g.reduce((s,p)=>s+p.engagement,0)/g.length):0};});
 
-  const sorted=R.slice().sort((a,b)=>b.engagement-a.engagement);
-  const top=sorted.slice(0,8);
-  const t10=sorted.slice(0,Math.max(1,Math.round(R.length*0.1)));
+  // --- top posts / top 10% ---
+  const sorted=A.slice().sort((a,b)=>b.engagement-a.engagement);
+  const t10=sorted.slice(0,Math.max(1,Math.round(A.length*0.1)));
   const tally=(arr,k)=>{const m={};arr.forEach(p=>m[p[k]]=(m[p[k]]||0)+1);
     return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([k2,v])=>({k:k2,n:v}));};
 
-  return{months,monthly,platRate,partial,recent,prior,win,
-    pillarCmp:cmp('pillar'),platCmp:cmp('platform'),
-    tot:{A,B,rateA:rate(A),rateB:rate(B)},
-    range:{from,to,label:recent.length?thLabel(recent[0])+'–'+thLabel(recent[recent.length-1]):'—',
-           priorLabel:prior.length?thLabel(prior[0])+'–'+thLabel(prior[prior.length-1]):'—'},
-    postCount:tot,effort,combos,dow,top,t10n:t10.length,
-    t10net:tally(t10,'network'),t10pil:tally(t10,'pillar'),allPil:tally(R,'pillar')};
+  return{winDays,latest,today,lag,
+    range:{aFrom,aTo,bFrom,bTo,
+           label:thDate(aFrom)+'–'+thDate(aTo), priorLabel:thDate(bFrom)+'–'+thDate(bTo)},
+    tot:{A:tA,B:tB,rateA:rate(tA),rateB:rate(tB)},
+    effort,platCmp,pillarCmp,combos,daily,ma,dow,dowDays,
+    top:sorted.slice(0,8),t10n:t10.length,t10net:tally(t10,'network'),t10pil:tally(t10,'pillar'),allPil:tally(A,'pillar'),
+    nA:A.length,nB:B.length};
 }
 
 /* ================= ข้อเสนอแนะ (สร้างจากตัวเลขที่คำนวณได้) ================= */
 function buildRecs(s){
-  const g=(arr,k,v)=>arr.find(x=>x[k]===v)||{};
-  const gp=(arr,pre)=>arr.find(x=>String(x.k||'').toLowerCase().startsWith(pre.toLowerCase()))||{};
+  const gn=v=>s.effort.find(x=>x.net===v)||{};
+  const gp=pre=>s.pillarCmp.find(x=>String(x.k||'').toLowerCase().startsWith(pre.toLowerCase()))||{};
   const gc=(pil,net)=>s.combos.find(c=>c.pil.toLowerCase().startsWith(pil.toLowerCase())&&c.net===net)||{};
   const t10of=pre=>(s.t10pil.find(x=>String(x.k).toLowerCase().startsWith(pre.toLowerCase()))||{n:0}).n;
   const allof=pre=>(s.allPil.find(x=>String(x.k).toLowerCase().startsWith(pre.toLowerCase()))||{n:0}).n;
-  const mo=s.win||3;
-  const fb=g(s.effort,'net','Facebook'),tk=g(s.effort,'net','TikTok'),ig=g(s.effort,'net','Instagram'),xx=g(s.effort,'net','X');
-  const edu=gp(s.pillarCmp,'Education'),ent=gp(s.pillarCmp,'Entertainment'),camp=gp(s.pillarCmp,'Campaign'),promo=gp(s.pillarCmp,'Promotion');
+  const W=s.winDays, perWk=n=>nf(n/W*7);
+  const fb=gn('Facebook'),tk=gn('TikTok'),ig=gn('Instagram');
+  const edu=gp('Education'),ent=gp('Entertainment'),camp=gp('Campaign'),promo=gp('Promotion');
   const nTk=gc('News','TikTok'),nIg=gc('News','Instagram');
-  const dowSorted=s.dow.filter(d=>d.posts>0).slice().sort((a,b)=>b.med-a.med);
-  const best=dowSorted[0]||{},worst=dowSorted[dowSorted.length-1]||{};
+  const ds=s.dow.filter(d=>d.posts>0).slice().sort((a,b)=>b.med-a.med);
+  const best=ds[0]||{},worst=ds[ds.length-1]||{};
   const mostPosts=s.dow.slice().sort((a,b)=>b.posts-a.posts)[0]||{};
   const out=[];
 
   if(fb.posts) out.push({tag:'stop',t:'ลดการผลิตคอนเทนต์เฉพาะทางสำหรับ Facebook — เปลี่ยนเป็นแชร์ต่อจาก IG',
-    why:`Facebook กิน <b>${fb.postShare}% ของแรงผลิต (${nf(fb.posts)} โพสต์)</b> แต่คืนมา <b>${fb.engShare}% ของ engagement</b> · ค่ากลางอยู่ที่ <b>${nf(fb.med)}</b> ต่อโพสต์`+
+    why:`ใน ${W} วันนี้ Facebook กิน <b>${fb.postShare}% ของแรงผลิต (${nf(fb.posts)} โพสต์)</b> แต่คืนมา <b>${fb.engShare}% ของ engagement</b> · ค่ากลางอยู่ที่ <b>${nf(fb.med)}</b> ต่อโพสต์`+
       ((s.t10net.find(x=>x.k==='Facebook')||{n:0}).n===0?' และ<b>ไม่มีโพสต์ Facebook ติด Top 10% เลยสักชิ้น</b>':''),
-    act:`ลดการทำอาร์ตเวิร์ก/แคปชันแยกสำหรับ FB ใช้วิธี cross-post จาก IG แทน → คืนกำลังผลิตราว <b>${nf(fb.posts/mo)} ชิ้น/เดือน</b> เอาไปเพิ่มฝั่งที่ให้ผลดีกว่า`});
+    act:`ลดการทำอาร์ตเวิร์ก/แคปชันแยกสำหรับ FB ใช้วิธี cross-post จาก IG แทน → คืนกำลังผลิตราว <b>${perWk(fb.posts)} ชิ้น/สัปดาห์</b> เอาไปเพิ่มฝั่งที่ให้ผลดีกว่า`});
 
-  if(tk.posts) out.push({tag:'do',t:`เพิ่มรอบยิง TikTok (ตอนนี้ราว ${nf(tk.posts/mo)} คลิป/เดือน)`,
-    why:`TikTok ให้ผล <b>${tk.engShare}% ของ engagement</b> จากแรงแค่ ${tk.postShare}% · แต่ต้องเข้าใจให้ถูก — ค่ากลางของมัน (<b>${nf(tk.med)}</b>) ${ig.med&&tk.med<ig.med?`<b>ต่ำกว่า</b> Instagram (${nf(ig.med)})`:`ใกล้เคียง Instagram (${nf(ig.med||0)})`} สิ่งที่ต่างคือ<b>หางบน</b>: มีโอกาสทะลุหลักแสน ซึ่งช่องอื่นแทบไม่เคยทำได้ นี่คือเกมที่ชนะด้วย<b>จำนวนครั้งที่ยิง</b>`,
-    act:`ใช้กำลังที่คืนมาจากข้อบน · เพิ่มจำนวนได้ แต่<b>ห้ามลดคุณภาพฮุก 3 วินาทีแรก</b> — เคยมีเดือนที่โพสต์ถี่ขึ้นแล้วค่ากลางตก`});
+  if(tk.posts) out.push({tag:'do',t:`เพิ่มรอบยิง TikTok (ตอนนี้ราว ${perWk(tk.posts)} คลิป/สัปดาห์)`,
+    why:`TikTok ให้ผล <b>${tk.engShare}% ของ engagement</b> จากแรงแค่ ${tk.postShare}% · แต่ต้องเข้าใจให้ถูก — ค่ากลางของมัน (<b>${nf(tk.med)}</b>) ${ig.med?(tk.med<ig.med?`<b>ต่ำกว่า</b> Instagram (${nf(ig.med)})`:`สูงกว่า Instagram (${nf(ig.med)})`):''} สิ่งที่ต่างคือ<b>หางบน</b>: มีโอกาสทะลุสูงมาก ซึ่งช่องอื่นแทบไม่เคยทำได้ นี่คือเกมที่ชนะด้วย<b>จำนวนครั้งที่ยิง</b>`,
+    act:'ใช้กำลังที่คืนมาจากข้อบน · เพิ่มจำนวนได้ แต่<b>ห้ามลดคุณภาพฮุก 3 วินาทีแรก</b>'});
 
-  if(edu.k) out.push({tag:'do',t:'เอา Education ไปเล่าด้วยภาษา Entertainment แทนที่จะเพิ่มจำนวน',
-    why:`Education โพสต์เยอะ <b>${nf(edu.rPosts)} ชิ้น</b>${edu.dPosts!=null?` (${edu.dPosts>0?'+':''}${edu.dPosts}%)`:''} แต่ engagement <b>${edu.dEng!=null?(edu.dEng>0?'+':'')+edu.dEng+'%':'—'}</b> และ rate ${edu.pRate}% → ${edu.rRate}% · ติด Top 10% แค่ <b>${t10of('Education')} จาก ${s.t10n} ชิ้น</b> (ทั้งที่โพสต์ไป ${allof('Education')} ชิ้น)`,
-    act:`ลดจำนวนลงบ้าง แล้วเปลี่ยนรูปแบบเป็น <b>"เตือนก่อนพลาด / ความเข้าใจผิดที่เจอบ่อย / สิ่งที่รู้ตอนสายเกินไป"</b> ยิงลง TikTok+IG ก่อน`});
+  if(edu.k&&edu.rPosts) out.push({tag:'do',t:'เอา Education ไปเล่าด้วยภาษา Entertainment แทนที่จะเพิ่มจำนวน',
+    why:`Education โพสต์ <b>${nf(edu.rPosts)} ชิ้น</b>${edu.dPosts!=null?` (${edu.dPosts>0?'+':''}${edu.dPosts}%)`:''} แต่ engagement <b>${edu.dEng!=null?(edu.dEng>0?'+':'')+edu.dEng+'%':'—'}</b> · rate ${edu.pRate}% → ${edu.rRate}% · ติด Top 10% <b>${t10of('Education')} จาก ${s.t10n} ชิ้น</b> (ทั้งที่โพสต์ไป ${allof('Education')} ชิ้น)`,
+    act:'ลดจำนวนลงบ้าง แล้วเปลี่ยนรูปแบบเป็น <b>"เตือนก่อนพลาด / ความเข้าใจผิดที่เจอบ่อย / สิ่งที่รู้ตอนสายเกินไป"</b> ยิงลง TikTok+IG ก่อน'});
 
   if(nTk.posts&&nIg.posts&&nTk.avg>nIg.avg) out.push({tag:'do',t:'ขยาย News บน TikTok — ของดีที่ยังทำน้อย',
     why:`News บน TikTok: <b>${nTk.posts} โพสต์ เฉลี่ย ${nf(nTk.avg)} rate ${nTk.rate}%</b> ให้ผลราว <b>${(nTk.avg/nIg.avg).toFixed(1)} เท่า</b>ของ News บน Instagram (${nf(nIg.avg)} / ${nIg.rate}%) แต่ News ส่วนใหญ่ยังกองอยู่ที่ IG (${nIg.posts} โพสต์)`,
     act:'ข่าว TCAS/สถิติ/ประกาศ ทำเป็นคลิปสั้น 20–30 วิ ลง TikTok ก่อน แล้วค่อยตัดลง IG'});
 
-  if(ent.k) out.push({tag:'do',t:'ดันสูตร "ตัวตนพี่ปั้น" ให้เป็นเสาหลัก ไม่ใช่ของแถม',
-    why:`Top ${Math.min(6,s.top.length)} โพสต์ของช่วงนี้${s.top.slice(0,6).every(p=>p.network==='TikTok')?'เป็น TikTok ทั้งหมด และ':' '}ล้วนเป็น<b>เรื่องส่วนตัว + อารมณ์ขัน + ร่วมเทรนด์</b> ไม่ใช่คอนเทนต์สอนตรง ๆ · Entertainment มี engagement <b>${ent.dEng!=null?(ent.dEng>0?'+':'')+ent.dEng+'%':'—'}</b>${ent.dPosts!=null&&ent.dPosts<0?` ทั้งที่โพสต์<b>น้อยลง ${Math.abs(ent.dPosts)}%</b>`:''} · pillar ที่ติด Top 10% มากที่สุดคือ <b>${(s.t10pil[0]||{}).k||'—'}</b> (${(s.t10pil[0]||{}).n||0} จาก ${s.t10n})`,
-    act:'ล็อกโควตาถาวรอย่างน้อย <b>8–10 คลิป/เดือน</b> ที่เป็นชีวิตพี่ปั้น/ทีม โดยไม่ต้องมีเนื้อหาขาย — ถือเป็นตัวสร้าง reach ให้คอนเทนต์ที่เหลือ'});
+  const top6=s.top.slice(0,6);
+  if(top6.length) out.push({tag:'do',t:'ดันสูตร "ตัวตนพี่ปั้น" ให้เป็นเสาหลัก ไม่ใช่ของแถม',
+    why:`Top ${top6.length} โพสต์ของช่วงนี้${top6.every(p=>p.network==='TikTok')?'เป็น TikTok ทั้งหมด':'ส่วนใหญ่มาจาก '+((s.t10net[0]||{}).k||'—')} · pillar ที่ติด Top 10% มากที่สุดคือ <b>${(s.t10pil[0]||{}).k||'—'}</b> (${(s.t10pil[0]||{}).n||0} จาก ${s.t10n})`+
+      (ent.k&&ent.dEng!=null?` · Entertainment engagement <b>${ent.dEng>0?'+':''}${ent.dEng}%</b>${ent.dPosts!=null?` ด้วยจำนวนโพสต์ ${ent.dPosts>0?'+':''}${ent.dPosts}%`:''}`:''),
+    act:'ล็อกโควตาถาวรอย่างน้อย <b>2–3 คลิป/สัปดาห์</b> ที่เป็นชีวิตพี่ปั้น/ทีม โดยไม่ต้องมีเนื้อหาขาย — ถือเป็นตัวสร้าง reach ให้คอนเทนต์ที่เหลือ'});
 
   if(best.full&&worst.full&&mostPosts.full) out.push({tag:'test',t:`ลองย้ายวันโพสต์หนักจากวัน${worst.full} ไปวัน${best.full}`,
-    why:`วัน${mostPosts.full}โพสต์เยอะที่สุด (<b>${mostPosts.posts} ชิ้น</b>, ค่ากลาง ${nf(mostPosts.med)}) ขณะที่วัน${best.full}ค่ากลางดีที่สุด (<b>${nf(best.med)}</b>) แต่โพสต์แค่ ${best.posts} ชิ้น · วัน${worst.full}ค่ากลางต่ำสุด (${nf(worst.med)})`,
-    act:'ทดลอง 4 สัปดาห์ · <b>เป็นสมมติฐาน ยังไม่ใช่ข้อสรุป</b> เพราะวันในสัปดาห์ปนกับชนิดคอนเทนต์อยู่ ต้องทดสอบจริงถึงจะรู้'});
+    why:`(ดูจากกรอบ ${s.dowDays} วัน เพื่อให้มีตัวอย่างพอ) วัน${mostPosts.full}โพสต์เยอะที่สุด (<b>${mostPosts.posts} ชิ้น</b>, ค่ากลาง ${nf(mostPosts.med)}) ขณะที่วัน${best.full}ค่ากลางดีที่สุด (<b>${nf(best.med)}</b>) แต่โพสต์แค่ ${best.posts} ชิ้น · วัน${worst.full}ค่ากลางต่ำสุด (${nf(worst.med)})`,
+    act:'ทดลอง 4 สัปดาห์ · <b>เป็นสมมติฐาน ยังไม่ใช่ข้อสรุป</b> เพราะวันในสัปดาห์ปนกับชนิดคอนเทนต์อยู่'});
 
   if(camp.k||promo.k) out.push({tag:'test',t:'เช็ค Promotion/Campaign กับยอดขายก่อนลดแรง',
-    why:`สอง pillar นี้ engagement rate ต่ำ (${[camp,promo].filter(x=>x.k).map(x=>x.rRate+'%').join(' / ')}) ดูเหมือนควรลด <b>แต่คอนเทนต์ขายไม่ควรวัดด้วย engagement</b> — คนกดซื้อมักไม่กดไลก์${camp.dEng>0?` · Campaign เองก็เพิ่งโต +${camp.dEng}%`:''}`,
+    why:`กลุ่มนี้ engagement rate ต่ำ (${[camp,promo].filter(x=>x.k).map(x=>x.rRate+'%').join(' / ')}) ดูเหมือนควรลด <b>แต่คอนเทนต์ขายไม่ควรวัดด้วย engagement</b> — คนกดซื้อมักไม่กดไลก์`,
     act:'ขอข้อมูลยอดสมัคร/คลิกลิงก์มาผูกกับโพสต์กลุ่มนี้ก่อนตัดสินใจ · <b>ไม่ควรลดแรงโดยดูตัวเลขในหน้านี้อย่างเดียว</b>'});
 
   return out;
@@ -335,45 +363,55 @@ function buildRecs(s){
 
 /* ================= render ================= */
 function render(){
-  const s=ST;
-  const R=s.range.label,Pv=s.range.priorLabel;
+  const s=ST,R=s.range.label,Pv=s.range.priorLabel,W=s.winDays;
+  const thin=n=>n<30?`<span class="thin">⚠ n=${n} น้อย</span>`:'';
+
   document.getElementById('sub').innerHTML=
-    `วิเคราะห์คอนเทนต์ ${s.months.length} เดือน · ${nf(s.postCount)} โพสต์ในช่วงที่เจาะ · เจาะช่วงล่าสุด <b>${R}</b> เทียบกับ ${Pv}`;
+    `เจาะ <b>${W} วันล่าสุด (${R})</b> เทียบกับ ${W} วันก่อนหน้า (${Pv})<br>
+     <b>${nf(s.nA)}</b> โพสต์ในช่วงนี้ · เทียบกับ ${nf(s.nB)} โพสต์`;
+
+  const lag=document.getElementById('lag');
+  if(s.lag>=2){lag.style.display='';
+    lag.innerHTML=`⏱ <b>ข้อมูลในชีตล่าสุดถึง ${thDate(s.latest)}</b> ซึ่งช้ากว่าวันนี้ ${s.lag} วัน — กรอบ "${W} วันล่าสุด" จึงนับถอยหลังจาก ${thDate(s.latest)} ไม่ใช่จากวันนี้ เพื่อไม่ให้ได้ช่วงที่ว่างเปล่า`;
+  } else lag.style.display='none';
 
   /* KPI */
   const A=s.tot.A,B=s.tot.B;
   const d=(a,b)=>b?`<span class="dlt ${a>=b?'up':'down'}">${a>=b?'▲':'▼'} ${Math.abs((a-b)/b*100).toFixed(0)}%</span>`:'';
   const bestNet=s.effort[0]||{};
   document.getElementById('kpis').innerHTML=`
-    <div class="kpi"><div class="label">Engagement (${R})</div><div class="val">${fmt(A.eng)}${d(A.eng,B.eng)}</div><div class="note">เทียบ ${Pv} ${fmt(B.eng)}</div></div>
+    <div class="kpi"><div class="label">Engagement (${W} วัน)</div><div class="val">${fmt(A.eng)}${d(A.eng,B.eng)}</div><div class="note">ช่วงก่อน ${fmt(B.eng)}</div></div>
     <div class="kpi"><div class="label">Engagement Rate</div><div class="val">${s.tot.rateA}%<span class="dlt ${s.tot.rateA>=s.tot.rateB?'up':'down'}">${s.tot.rateA>=s.tot.rateB?'▲':'▼'} ${Math.abs(s.tot.rateA-s.tot.rateB).toFixed(2)}pt</span></div><div class="note">จาก ${s.tot.rateB}%</div></div>
-    <div class="kpi"><div class="label">จำนวนโพสต์</div><div class="val">${nf(A.posts)}${d(A.posts,B.posts)}</div><div class="note">เทียบ ${nf(B.posts)}</div></div>
+    <div class="kpi"><div class="label">จำนวนโพสต์</div><div class="val">${nf(A.n)}${d(A.n,B.n)}</div><div class="note">ช่วงก่อน ${nf(B.n)} · ~${nf(A.n/W*7)}/สัปดาห์</div></div>
     <div class="kpi"><div class="label">ช่องที่คุ้มที่สุด</div><div class="val" style="color:${bestNet.c||'#fff'}">${esc(bestNet.net||'—')}</div><div class="note">${nf(bestNet.avgEng||0)} eng/โพสต์ · แรง ${bestNet.postShare||0}% ได้ผล ${bestNet.engShare||0}%</div></div>`;
 
-  /* เทรนด์ */
-  const pk=s.monthly.reduce((a,m)=>m.rate>a.rate?m:a,s.monthly[0]||{rate:0});
+  /* กราฟรายวัน */
+  const pk=s.daily.reduce((a,x)=>x.eng>a.eng?x:a,s.daily[0]||{eng:0});
   document.getElementById('hTrend').innerHTML=
-    `จุดพีคคือ ${esc(pk.label||'—')} (rate ${pk.rate||0}%)`+(s.partial?` · <b style="color:var(--warn)">${thLabel(s.partial)} ยังไม่จบเดือน</b> จึงไม่ถูกนับในการเทียบช่วง`:'');
-  mkChart('cTrend',{data:{labels:s.monthly.map(m=>m.label),datasets:[
-    {type:'bar',label:'Engagement',data:s.monthly.map(m=>m.eng),
-     backgroundColor:s.monthly.map(m=>m.partial?'#3a4150':'#0080ff'),borderRadius:6,yAxisID:'y'},
-    {type:'line',label:'Eng Rate %',data:s.monthly.map(m=>m.rate),borderColor:'#f9c817',backgroundColor:'#f9c817',
-     borderWidth:3,tension:.35,pointRadius:4,yAxisID:'y1'}]},
+    `ย้อนหลัง ${TREND_DAYS} วัน · แท่งสีฟ้าคือช่วง ${W} วันที่กำลังวิเคราะห์ · เส้นเหลืองคือค่าเฉลี่ยเคลื่อนที่ 7 วัน`+
+    (pk.eng?` · วันที่แรงสุดคือ ${thDate(pk.d)} (${fmt(pk.eng)})`:'');
+  mkChart('cTrend',{data:{labels:s.daily.map(x=>thDate(x.d)),datasets:[
+    {type:'bar',label:'Engagement/วัน',data:s.daily.map(x=>x.eng),
+     backgroundColor:s.daily.map(x=>x.inWin?'#0080ff':'#3a4150'),borderRadius:3,yAxisID:'y'},
+    {type:'line',label:'เฉลี่ย 7 วัน',data:s.ma,borderColor:'#f9c817',backgroundColor:'#f9c817',
+     borderWidth:2.5,tension:.35,pointRadius:0,yAxisID:'y'}]},
    options:{responsive:true,maintainAspectRatio:false,
      plugins:{legend:{display:true,labels:{boxWidth:12}},
-       tooltip:{callbacks:{afterBody:c=>s.monthly[c[0].dataIndex].partial?'⚠ เดือนยังไม่จบ':''}}},
-     scales:{y:{ticks:{callback:fmt},title:{display:true,text:'Engagement'}},
-             y1:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>v+'%'},title:{display:true,text:'Rate'}}}}});
+       tooltip:{callbacks:{afterBody:c=>'โพสต์ '+(s.daily[c[0].dataIndex]||{}).n+' ชิ้น'}}},
+     scales:{x:{ticks:{maxTicksLimit:10,autoSkip:true}},y:{ticks:{callback:fmt}}}}});
 
-  /* platform rate */
-  const tkArr=s.platRate.TikTok||[];
-  document.getElementById('hPlat').textContent=tkArr.length
-    ? `TikTok แกว่งแรงที่สุด (${Math.min(...tkArr)}% – ${Math.max(...tkArr)}%) ขณะที่ช่องอื่นค่อนข้างนิ่ง` : '—';
-  mkChart('cPlatRate',{type:'line',data:{labels:s.monthly.map(m=>m.label),
-    datasets:Object.entries(s.platRate).map(([k,v])=>({label:k,data:v,borderColor:NETC[k]||'#5b8cff',
-      backgroundColor:NETC[k]||'#5b8cff',borderWidth:k==='TikTok'?3:2,tension:.35,pointRadius:k==='TikTok'?4:2}))},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{boxWidth:12}}},
-     scales:{y:{ticks:{callback:v=>v+'%'}}}}});
+  /* platform rate เทียบสองช่วง */
+  const pc2=s.platCmp.filter(p=>p.rPosts||p.pPosts);
+  document.getElementById('hPlat').textContent=`เทียบ ${W} วันล่าสุด กับ ${W} วันก่อนหน้า · ตัวเลขบนแท่งคือจำนวนโพสต์`;
+  mkChart('cPlatRate',{type:'bar',data:{labels:pc2.map(p=>p.k),datasets:[
+    {label:R,data:pc2.map(p=>p.rRate),backgroundColor:pc2.map(p=>NETC[p.k]||'#0080ff'),borderRadius:5},
+    {label:Pv,data:pc2.map(p=>p.pRate),backgroundColor:'#5a6473',borderRadius:5}]},
+   options:{responsive:true,maintainAspectRatio:false,
+     plugins:{legend:{display:true,labels:{boxWidth:12,font:{size:10}}},
+       datalabels:{display:true,color:'#cdd6e6',anchor:'end',align:'top',font:{size:9,weight:'600'},
+         formatter:(v,c)=>{const p=pc2[c.dataIndex];return 'n='+(c.datasetIndex===0?p.rPosts:p.pPosts);}},
+       tooltip:{callbacks:{label:c=>c.dataset.label+': rate '+c.parsed.y+'%'}}},
+     layout:{padding:{top:18}},scales:{y:{ticks:{callback:v=>v+'%'}}}}});
 
   /* effort */
   document.getElementById('ttlEffort').textContent='('+R+')';
@@ -394,7 +432,7 @@ function render(){
        datalabels:{display:true,color:'#e7eaf0',anchor:'end',align:c=>c.dataset.data[c.dataIndex]>=0?'right':'left',
          font:{weight:'700',size:11},formatter:v=>(v>0?'+':'')+v+'%'},
        tooltip:{callbacks:{label:c=>{const p=pc[c.dataIndex];
-         return `Eng ${(p.dEng>0?'+':'')+p.dEng}% · โพสต์ ${p.dPosts!=null?(p.dPosts>0?'+':'')+p.dPosts+'%':'—'} · rate ${p.pRate}%→${p.rRate}%`;}}}},
+         return `Eng ${(p.dEng>0?'+':'')+p.dEng}% · โพสต์ ${p.rPosts} vs ${p.pPosts} · rate ${p.pRate}%→${p.rRate}%`;}}}},
      scales:{x:{ticks:{callback:v=>v+'%'}}},layout:{padding:{right:44,left:20}}}});
 
   /* scatter */
@@ -414,28 +452,33 @@ function render(){
   /* combos */
   const row=c=>`<tr><td><b>${esc(c.pil)}</b> <span class="pill ${CLS[c.net]||'x'}">${esc(c.net)}</span></td>
     <td>${c.posts}</td><td><b>${nf(c.avg)}</b></td><td>${c.rate}%</td></tr>`;
-  document.getElementById('hWin').textContent=`Pillar × ช่อง ที่ได้ผลดีเมื่อเทียบกับแรงที่ลง · เฉพาะที่มีอย่างน้อย 5 โพสต์ในช่วง ${R}`;
-  document.getElementById('tWin').innerHTML=s.combos.slice(0,6).map(row).join('')||'<tr><td colspan="4">—</td></tr>';
-  document.getElementById('tLose').innerHTML=s.combos.slice(-6).reverse().map(row).join('')||'<tr><td colspan="4">—</td></tr>';
+  document.getElementById('hWin').textContent=
+    `Pillar × ช่อง ที่ได้ผลดีเมื่อเทียบกับแรงที่ลง · เฉพาะที่มีอย่างน้อย ${MIN_N} โพสต์ใน ${W} วันนี้ (ผ่านเกณฑ์ ${s.combos.length} คู่)`;
+  const none='<tr><td colspan="4" style="color:var(--muted)">ยังไม่มีคู่ไหนถึงเกณฑ์ '+MIN_N+' โพสต์ในกรอบนี้ — ลองขยายกรอบเวลา</td></tr>';
+  document.getElementById('tWin').innerHTML=s.combos.slice(0,6).map(row).join('')||none;
+  document.getElementById('tLose').innerHTML=s.combos.slice(-6).reverse().map(row).join('')||none;
 
   /* median vs mean */
   const ef=s.effort.slice().sort((a,b)=>b.posts-a.posts);
   const tk=s.effort.find(e=>e.net==='TikTok')||{},ig=s.effort.find(e=>e.net==='Instagram')||{};
-  document.getElementById('med1t').textContent='1. จุดแข็งของ TikTok อยู่ที่โพสต์ที่ทะลุ ไม่ใช่ทุกโพสต์';
+  document.getElementById('med1t').innerHTML='1. ค่ากลาง vs ค่าเฉลี่ย รายช่อง'+thin(s.nA);
   document.getElementById('tMed').innerHTML=ef.map(e=>`<tr><td><span class="pill ${CLS[e.net]||'x'}">${esc(e.net)}</span></td>
     <td>${e.posts}</td><td><b>${nf(e.med)}</b></td><td style="color:var(--muted)">${nf(e.avgEng)}</td></tr>`).join('');
   const maxEng=(s.top[0]||{}).engagement||0;
-  document.getElementById('med1n').innerHTML=tk.med&&ig.med
-    ? `ค่ากลางของ TikTok (${nf(tk.med)}) <b style="color:var(--txt)">${tk.med<ig.med?'ต่ำกว่า':'ใกล้เคียง'}</b> Instagram (${nf(ig.med)})<br>
-       แต่ค่าเฉลี่ยสูงกว่า ${ig.avgEng?(tk.avgEng/ig.avgEng).toFixed(1):'—'} เท่า เพราะมีโพสต์ทะลุ ${nf(maxEng)} · <b style="color:var(--txt)">TikTok จึงเหมาะกับการยิงให้บ่อย มากกว่าคาดหวังผลจากทุกชิ้น</b>` : '—';
+  document.getElementById('med1n').innerHTML=(tk.med&&ig.med)
+    ? `ค่ากลางของ TikTok (${nf(tk.med)}) <b style="color:var(--txt)">${tk.med<ig.med?'ต่ำกว่า':'สูงกว่า'}</b> Instagram (${nf(ig.med)}) แต่ค่าเฉลี่ยต่างกัน ${ig.avgEng?(tk.avgEng/ig.avgEng).toFixed(1):'—'} เท่า<br>
+       โพสต์แรงสุดในช่วงนี้อยู่ที่ ${nf(maxEng)} · <b style="color:var(--txt)">ค่าเฉลี่ยถูกดึงด้วยโพสต์ไม่กี่ชิ้นได้ง่าย ยิ่งกรอบสั้นยิ่งไว</b>`
+    : 'ข้อมูลในกรอบนี้ยังไม่พอเทียบสองช่อง';
 
   const ds=s.dow.filter(x=>x.posts>0).slice().sort((a,b)=>b.med-a.med);
   const bd=ds[0]||{},wd=ds[ds.length-1]||{},mp=s.dow.slice().sort((a,b)=>b.posts-a.posts)[0]||{};
-  const ma=s.dow.slice().sort((a,b)=>b.avg-a.avg)[0]||{};
-  document.getElementById('med2t').textContent=`2. วัน${ma.full||'—'}ดูดีที่สุด — แต่มาจากคลิปไม่กี่ชิ้น`;
-  document.getElementById('med2n').innerHTML=
-    `วัน${ma.full}มีค่าเฉลี่ยสูงสุด (${nf(ma.avg)}) แต่ค่ากลางแค่ ${nf(ma.med)} — สูงเพราะคลิปที่ปังไม่กี่ชิ้น<br>
-     <b style="color:var(--txt)">เมื่อดูค่ากลาง: วัน${bd.full}ดีสุด (${nf(bd.med)}) ส่วนวัน${wd.full}ต่ำสุด (${nf(wd.med)}) — และวันที่โพสต์เยอะสุดคือวัน${mp.full} (${mp.posts} ชิ้น)</b>`;
+  const ma2=s.dow.slice().sort((a,b)=>b.avg-a.avg)[0]||{};
+  document.getElementById('med2t').innerHTML=`2. วันไหนได้ผลจริง <span style="font-weight:400;color:var(--muted);font-size:12px">(ใช้กรอบ ${s.dowDays} วัน)</span>`;
+  document.getElementById('med2n').innerHTML= ma2.full?
+    `วัน${ma2.full}มีค่าเฉลี่ยสูงสุด (${nf(ma2.avg)}) แต่ค่ากลางแค่ ${nf(ma2.med)} — สูงเพราะโพสต์ที่ปังไม่กี่ชิ้น<br>
+     <b style="color:var(--txt)">เมื่อดูค่ากลาง: วัน${bd.full}ดีสุด (${nf(bd.med)}) ส่วนวัน${wd.full}ต่ำสุด (${nf(wd.med)}) — และวันที่โพสต์เยอะสุดคือวัน${mp.full} (${mp.posts} ชิ้น)</b><br>
+     <span style="color:var(--muted)">ส่วนนี้ใช้กรอบยาวกว่าที่เลือกไว้ เพราะ ${W} วันจะเหลือแค่ ~${Math.round(s.nA/7)} ตัวอย่างต่อวัน ซึ่งน้อยเกินจะสรุป</span>`
+    : '—';
   mkChart('cDow',{type:'bar',data:{labels:s.dow.map(x=>x.d),datasets:[
     {label:'ค่ากลาง (median)',data:s.dow.map(x=>x.med),backgroundColor:'#0080ff',borderRadius:5},
     {label:'ค่าเฉลี่ย (mean)',data:s.dow.map(x=>x.avg),backgroundColor:'#3a4150',borderRadius:5}]},
@@ -445,16 +488,14 @@ function render(){
      scales:{y:{ticks:{callback:fmt}}}}});
 
   /* top posts */
-  const allTk=s.top.slice(0,6).every(p=>p.network==='TikTok');
-  document.getElementById('hTop').textContent=
-    (allTk?'6 อันดับแรกเป็น TikTok ทั้งหมด · ':'')+`ช่วง ${R} · ดูว่ามีอะไรร่วมกัน`;
-  document.getElementById('tTop').innerHTML=s.top.map(p=>{
-    const dt=p.date.split('-'),lbl=(+dt[2])+' '+TH[+dt[1]-1];
+  document.getElementById('hTop').textContent=`ช่วง ${R} · ดูว่ามีอะไรร่วมกัน`;
+  document.getElementById('tTop').innerHTML=s.top.length?s.top.map(p=>{
     const r=p.impressions?(p.engagement/p.impressions*100).toFixed(1):'0';
-    return `<tr><td>${lbl}</td><td><span class="pill ${CLS[p.network]||'x'}">${esc(p.network)}</span></td>
+    return `<tr><td>${thDate(p.date)}</td><td><span class="pill ${CLS[p.network]||'x'}">${esc(p.network)}</span></td>
       <td style="text-align:left;color:var(--muted)">${esc(p.pillar)}</td>
       <td style="text-align:left">${p.link?`<a href="${esc(p.link)}" target="_blank" rel="noopener" style="color:var(--sky);text-decoration:none">${esc(p.message||'(ไม่มีข้อความ)')}</a>`:esc(p.message||'(ไม่มีข้อความ)')}</td>
-      <td><b>${nf(p.engagement)}</b></td><td style="color:${+r>20?'#2ecc71':'#e7eaf0'}">${r}%</td></tr>`;}).join('');
+      <td><b>${nf(p.engagement)}</b></td><td style="color:${+r>20?'#2ecc71':'#e7eaf0'}">${r}%</td></tr>`;}).join('')
+    :'<tr><td colspan="6" style="color:var(--muted)">ไม่มีโพสต์ในกรอบนี้</td></tr>';
 
   /* recs */
   const label={do:'น่าลงแรงเพิ่ม',stop:'น่าลดแรงลง',test:'ควรทดสอบก่อน'};
@@ -464,14 +505,15 @@ function render(){
 
   /* caveat */
   document.getElementById('caveat').innerHTML=`<b>ข้อควรระวังในการอ่าน:</b>
-    ${s.partial?`<br>• <b>${thLabel(s.partial)} ยังไม่จบเดือน</b> ตัวเลขเดือนนี้จะต่ำกว่าความจริง จึงถูกตัดออกจากการเทียบช่วงทั้งหมด (ใช้ ${R} เทียบ ${Pv})`:''}
-    <br>• โพสต์ไวรัลชิ้นเดียวดึงค่าเฉลี่ยได้มาก — โพสต์อันดับ 1 ของช่วงนี้อยู่ที่ <b>${nf((s.top[0]||{}).engagement||0)}</b> engagement · <b>อย่าตั้งเป้าโดยคิดว่าเดือนที่มีไวรัลคือฐานปกติ</b>
-    <br>• ชื่อ pillar ในแท็บสรุปกับแท็บรายโพสต์ยังไม่ตรงกัน (เช่น "Entertainment" กับ "Entertainment - Lifestyle") ตัวเลขสองส่วนจึงเทียบตรง ๆ ไม่ได้ 100%
+    <br>• กรอบ ${W} วันมี <b>${nf(s.nA)} โพสต์</b> (ช่วงเทียบ ${nf(s.nB)}) — ${s.nA<80?'<b>ค่อนข้างน้อย ตัวเลข % จะแกว่งแรง</b> ถ้าจะตัดสินใจเรื่องใหญ่ แนะนำสลับไปกรอบ 30–90 วันก่อน':'พอสำหรับดูภาพระดับแพลตฟอร์ม แต่ระดับ pillar × ช่อง ยังแกว่งได้'}
+    <br>• กรอบยิ่งสั้น <b>โพสต์ไวรัลชิ้นเดียวยิ่งดึงค่าเฉลี่ยได้มาก</b> — โพสต์แรงสุดในช่วงนี้อยู่ที่ ${nf((s.top[0]||{}).engagement||0)} engagement จึงควรดูค่ากลางคู่เสมอ
+    <br>• วันในสัปดาห์ใช้กรอบ ${s.dowDays} วันเสมอ ไม่ตามกรอบที่เลือก เพราะ 7 วันต้องการตัวอย่างมากกว่านี้
+    <br>• ตัวเลขทั้งหน้าคิดจาก<b>ข้อมูลรายโพสต์</b> จึงอาจต่างจากหน้าภาพรวมเล็กน้อย (หน้านั้นใช้ยอดสรุปรายเดือนจากอีกแท็บ)
     <br>• ข้อมูลนี้บอกได้แค่ <b>engagement</b> ยังไม่ได้ผูกกับยอดสมัครเรียนจริง — คอนเทนต์ที่ engagement ต่ำอาจยังขายได้ดี ควรดูคู่กับข้อมูลยอดขายก่อนลดแรง`;
 
   const m=DATA.meta||{};
   document.getElementById('foot').innerHTML=
-    `ดึงสดจาก Google Sheet · ที่มา: ${esc(m.source||'-')} · ช่วงวิเคราะห์หลัก ${R} (${nf(s.postCount)} โพสต์)`;
+    `ดึงสดจาก Google Sheet · ที่มา: ${esc(m.source||'-')} · ข้อมูลถึง ${thDate(s.latest)} · วิเคราะห์ ${R} (${nf(s.nA)} โพสต์)`;
   const el=document.getElementById('lastUpdate');
   if(el)el.textContent='🕒 อัปเดตล่าสุด: '+fmtUpdated(m.generatedAt);
 }
@@ -491,20 +533,22 @@ function fetchJSON(url,tries){
       return new Promise(res=>setTimeout(res,4000)).then(()=>fetchJSON(url,tries-1));
     });
 }
+function recompute(){
+  const w=+document.getElementById('fWin').value||15;
+  ST=analyse(DATA.posts,w);
+  if(!ST){document.getElementById('sub').textContent='ไม่พบข้อมูลรายโพสต์ที่มีวันที่';return;}
+  render();
+}
 function loadData(fresh){
   const btn=document.getElementById('refresh');
   if(btn){btn.disabled=true;btn.textContent='⏳ กำลังรีเฟรช...';}
-  const q=(fresh?'fresh=1&':'')+Date.now();
-  return Promise.all([fetchJSON('/content-data.json?'+q),fetchJSON('/data/posts.json?'+q)])
-    .then(([core,pd])=>{
-      DATA={meta:pd.meta||core.meta||{},summary:core.summary||[],posts:pd.posts||[]};
-      ST=analyse(DATA.summary,DATA.posts);
-      render();
-    })
+  return fetchJSON('/data/posts.json?'+(fresh?'fresh=1&':'')+Date.now())
+    .then(pd=>{DATA={meta:pd.meta||{},posts:pd.posts||[]};recompute();})
     .catch(e=>{document.getElementById('sub').textContent='โหลดข้อมูลไม่สำเร็จ: '+e.message;console.error(e);})
     .finally(()=>{if(btn){btn.disabled=false;btn.textContent='🔄 รีเฟรชข้อมูล';}});
 }
 document.getElementById('refresh').onclick=()=>loadData(true);
+document.getElementById('fWin').onchange=recompute;
 loadData(false);
 </script>
 </body>

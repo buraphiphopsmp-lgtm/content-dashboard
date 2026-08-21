@@ -189,7 +189,8 @@
 /* ================= helpers ================= */
 const MO3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const TH =['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-const DW =['อา','จ','อ','พ','พฤ','ศ','ส'];
+const DW =['อา','จ','อ','พ','พฤ','ศ','ส'];                                    // ย่อ — ใช้บนแกนกราฟ
+const DWF=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];   // เต็ม — ใช้ในประโยค
 const NETC={TikTok:'#25F4EE',Instagram:'#C13584',Facebook:'#1877F2',X:'#8b93a3',YouTube:'#FF0000'};
 const CLS ={TikTok:'tk',Instagram:'ig',Facebook:'fb',X:'x',YouTube:'yt'};
 const pad=n=>String(n).padStart(2,'0');
@@ -266,7 +267,7 @@ function analyse(summary,posts){
     .sort((a,b)=>b.avg-a.avg);
 
   const dow=DW.map((d,i)=>{const g=R.filter(p=>new Date(p.date+'T00:00:00Z').getUTCDay()===i);
-    return{d,posts:g.length,med:med(g.map(p=>p.engagement)),
+    return{d,full:DWF[i],posts:g.length,med:med(g.map(p=>p.engagement)),
       avg:g.length?Math.round(g.reduce((s,p)=>s+p.engagement,0)/g.length):0};});
 
   const sorted=R.slice().sort((a,b)=>b.engagement-a.engagement);
@@ -321,8 +322,8 @@ function buildRecs(s){
     why:`Top ${Math.min(6,s.top.length)} โพสต์ของช่วงนี้${s.top.slice(0,6).every(p=>p.network==='TikTok')?'เป็น TikTok ทั้งหมด และ':' '}ล้วนเป็น<b>เรื่องส่วนตัว + อารมณ์ขัน + ร่วมเทรนด์</b> ไม่ใช่คอนเทนต์สอนตรง ๆ · Entertainment มี engagement <b>${ent.dEng!=null?(ent.dEng>0?'+':'')+ent.dEng+'%':'—'}</b>${ent.dPosts!=null&&ent.dPosts<0?` ทั้งที่โพสต์<b>น้อยลง ${Math.abs(ent.dPosts)}%</b>`:''} · pillar ที่ติด Top 10% มากที่สุดคือ <b>${(s.t10pil[0]||{}).k||'—'}</b> (${(s.t10pil[0]||{}).n||0} จาก ${s.t10n})`,
     act:'ล็อกโควตาถาวรอย่างน้อย <b>8–10 คลิป/เดือน</b> ที่เป็นชีวิตพี่ปั้น/ทีม โดยไม่ต้องมีเนื้อหาขาย — ถือเป็นตัวสร้าง reach ให้คอนเทนต์ที่เหลือ'});
 
-  if(best.d&&worst.d&&mostPosts.d) out.push({tag:'test',t:`ลองย้ายวันโพสต์หนักจาก "วัน${worst.d}" ไป "วัน${best.d}"`,
-    why:`วัน${mostPosts.d} โพสต์เยอะที่สุด (<b>${mostPosts.posts} ชิ้น</b>, ค่ากลาง ${nf(mostPosts.med)}) ขณะที่วัน${best.d} ค่ากลางดีที่สุด (<b>${nf(best.med)}</b>) แต่โพสต์แค่ ${best.posts} ชิ้น · วัน${worst.d} ค่ากลางต่ำสุด (${nf(worst.med)})`,
+  if(best.full&&worst.full&&mostPosts.full) out.push({tag:'test',t:`ลองย้ายวันโพสต์หนักจากวัน${worst.full} ไปวัน${best.full}`,
+    why:`วัน${mostPosts.full}โพสต์เยอะที่สุด (<b>${mostPosts.posts} ชิ้น</b>, ค่ากลาง ${nf(mostPosts.med)}) ขณะที่วัน${best.full}ค่ากลางดีที่สุด (<b>${nf(best.med)}</b>) แต่โพสต์แค่ ${best.posts} ชิ้น · วัน${worst.full}ค่ากลางต่ำสุด (${nf(worst.med)})`,
     act:'ทดลอง 4 สัปดาห์ · <b>เป็นสมมติฐาน ยังไม่ใช่ข้อสรุป</b> เพราะวันในสัปดาห์ปนกับชนิดคอนเทนต์อยู่ ต้องทดสอบจริงถึงจะรู้'});
 
   if(camp.k||promo.k) out.push({tag:'test',t:'เช็ค Promotion/Campaign กับยอดขายก่อนลดแรง',
@@ -431,10 +432,10 @@ function render(){
   const ds=s.dow.filter(x=>x.posts>0).slice().sort((a,b)=>b.med-a.med);
   const bd=ds[0]||{},wd=ds[ds.length-1]||{},mp=s.dow.slice().sort((a,b)=>b.posts-a.posts)[0]||{};
   const ma=s.dow.slice().sort((a,b)=>b.avg-a.avg)[0]||{};
-  document.getElementById('med2t').textContent=`2. วัน${ma.d||'—'}ดูดีที่สุด — แต่มาจากคลิปไม่กี่ชิ้น`;
+  document.getElementById('med2t').textContent=`2. วัน${ma.full||'—'}ดูดีที่สุด — แต่มาจากคลิปไม่กี่ชิ้น`;
   document.getElementById('med2n').innerHTML=
-    `วัน${ma.d} มีค่าเฉลี่ยสูงสุด (${nf(ma.avg)}) แต่ค่ากลางแค่ ${nf(ma.med)} — สูงเพราะคลิปที่ปังไม่กี่ชิ้น<br>
-     <b style="color:var(--txt)">เมื่อดูค่ากลาง: วัน${bd.d}ดีสุด (${nf(bd.med)}) ส่วนวัน${wd.d}ต่ำสุด (${nf(wd.med)}) — และวันที่โพสต์เยอะสุดคือวัน${mp.d} (${mp.posts} ชิ้น)</b>`;
+    `วัน${ma.full}มีค่าเฉลี่ยสูงสุด (${nf(ma.avg)}) แต่ค่ากลางแค่ ${nf(ma.med)} — สูงเพราะคลิปที่ปังไม่กี่ชิ้น<br>
+     <b style="color:var(--txt)">เมื่อดูค่ากลาง: วัน${bd.full}ดีสุด (${nf(bd.med)}) ส่วนวัน${wd.full}ต่ำสุด (${nf(wd.med)}) — และวันที่โพสต์เยอะสุดคือวัน${mp.full} (${mp.posts} ชิ้น)</b>`;
   mkChart('cDow',{type:'bar',data:{labels:s.dow.map(x=>x.d),datasets:[
     {label:'ค่ากลาง (median)',data:s.dow.map(x=>x.med),backgroundColor:'#0080ff',borderRadius:5},
     {label:'ค่าเฉลี่ย (mean)',data:s.dow.map(x=>x.avg),backgroundColor:'#3a4150',borderRadius:5}]},

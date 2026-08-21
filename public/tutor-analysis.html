@@ -375,10 +375,21 @@ function fmtU(s){const m=(s||'').match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/
 function setSub(){const m=DATA.meta||{},tu=[...new Set((DATA.tutors||[]).map(r=>r.tutor))].length,nets=[...new Set((DATA.tutors||[]).map(r=>r.network))].length;
   document.getElementById('sub').textContent=`เทียบติวเตอร์ ${tu} ราย · ${nets} ช่องทาง · วัดการเติบโตจากยอด Follower · จากแท็บ Raw data by Tutor Platform`;
   document.getElementById('lastUpdate').textContent='🕒 อัปเดตล่าสุด: '+fmtU(m.generatedAt);}
+// Render แพลนฟรีจะหลับเมื่อไม่มีคนใช้ คำขอแรกหลังตื่นอาจล้ม -> ลองซ้ำอัตโนมัติ
+function fetchJSON(url,tries){
+  tries=tries||3;
+  return fetch(url).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(d=>{if(d&&d.error)throw new Error(d.error);return d;})
+    .catch(e=>{
+      if(tries<=1) throw e;
+      document.getElementById('sub').textContent='กำลังปลุกเซิร์ฟเวอร์ แล้วลองใหม่…';
+      return new Promise(res=>setTimeout(res,4000)).then(()=>fetchJSON(url,tries-1));
+    });
+}
 function loadData(fresh){
   const btn=document.getElementById('refresh');
   if(btn){btn.disabled=true;btn.textContent='⏳ กำลังรีเฟรช...';}
-  return fetch('content-data.json?'+(fresh?'fresh=1&':'')+Date.now()).then(r=>r.json()).then(d=>{
+  return fetchJSON('/data/tutors.json?'+(fresh?'fresh=1&':'')+Date.now()).then(d=>{
     DATA=d;
     const tutors=[...new Set((DATA.tutors||[]).map(r=>r.tutor))];
     const keys=[...new Set((DATA.tutors||[]).flatMap(r=>[r.tutor,r.profile]).filter(Boolean))];

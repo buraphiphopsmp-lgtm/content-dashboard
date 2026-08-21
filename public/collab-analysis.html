@@ -275,10 +275,21 @@ function fmtU(s){const m=(s||'').match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/
 function setSub(){const m=DATA.meta||{},tu=[...new Set((DATA.collab||[]).map(r=>r.tutor))].length;
   document.getElementById('sub').textContent=`IG Collab Post · เทียบติวเตอร์ ${tu} ราย · ${(DATA.collab||[]).length} แถว · จากแท็บ Raw Data Tutor Overview (IG Collab Post)`;
   document.getElementById('lastUpdate').textContent='🕒 อัปเดตล่าสุด: '+fmtU(m.generatedAt);}
+// Render แพลนฟรีจะหลับเมื่อไม่มีคนใช้ คำขอแรกหลังตื่นอาจล้ม -> ลองซ้ำอัตโนมัติ
+function fetchJSON(url,tries){
+  tries=tries||3;
+  return fetch(url).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(d=>{if(d&&d.error)throw new Error(d.error);return d;})
+    .catch(e=>{
+      if(tries<=1) throw e;
+      document.getElementById('sub').textContent='กำลังปลุกเซิร์ฟเวอร์ แล้วลองใหม่…';
+      return new Promise(res=>setTimeout(res,4000)).then(()=>fetchJSON(url,tries-1));
+    });
+}
 function loadData(fresh){
   const btn=document.getElementById('refresh');
   if(btn){btn.disabled=true;btn.textContent='⏳ กำลังรีเฟรช...';}
-  return fetch('content-data.json?'+(fresh?'fresh=1&':'')+Date.now()).then(r=>r.json()).then(d=>{
+  return fetchJSON('/data/collab.json?'+(fresh?'fresh=1&':'')+Date.now()).then(d=>{
     DATA=d;
     [...new Set((DATA.collab||[]).map(r=>r.tutor))].forEach((t,i)=>TCOL[t]=PALETTE[i%PALETTE.length]);
     setSub();
